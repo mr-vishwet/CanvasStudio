@@ -1,0 +1,779 @@
+
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║           canvas_studio — Phase-wise Development Plan                          ║
+║           Version 1.0 | March 2026                                             ║
+║           5 Phases → Production-ready SDK + Example App                        ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 1 — CORE CANVAS ENGINE
+Weeks: 1–3  |  Output: A working canvas that renders layers, handles gestures,
+             supports undo/redo, and exports PNG/JPG — zero backend needed.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MILESTONE 1.1 — Data Models (Day 1–2)
+───────────────────────────────────────
+Files to implement:
+  lib/src/models/canvas_document.dart
+  lib/src/models/layer/layer.dart
+  lib/src/models/layer/text_layer.dart
+  lib/src/models/layer/image_layer.dart
+  lib/src/models/layer/shape_layer.dart
+  lib/src/models/layer/sticker_layer.dart
+  lib/src/models/layer/paint_layer.dart
+  lib/src/models/animation_config.dart
+  lib/src/models/effect_config.dart
+  lib/src/models/export/export_config.dart
+  lib/src/models/export/video_trim_config.dart
+
+Tasks:
+  [ ] Define CanvasDocument with id, canvasSize, type, layers[], audio, videoTrim
+  [ ] Define abstract Layer base class with all common fields
+  [ ] Implement TextLayer, ImageLayer, ShapeLayer, StickerLayer, PaintLayer subtypes
+  [ ] Add copyWith() to every model
+  [ ] Add toJson() / fromJson() to every model
+  [ ] Write unit tests: test/unit/models/canvas_document_test.dart
+  [ ] Write unit tests: test/unit/models/layer_test.dart
+
+Acceptance criteria:
+  → All models serialize to/from JSON correctly
+  → copyWith() works without mutation
+  → Unit tests pass: flutter test test/unit/models/
+
+──────────────────────────────────────────────────────────────────────────────────
+MILESTONE 1.2 — CanvasController + HistoryManager (Day 3–5)
+───────────────────────────────────────────────────────────────────────────────
+Files to implement:
+  lib/src/state/canvas_controller.dart
+  lib/src/state/history_manager.dart
+  lib/src/state/selection_state.dart
+
+Tasks:
+  [ ] HistoryManager: immutable snapshot stack (ListQueue, max 50)
+        push(snapshot), undo(current), redo(current), canUndo, canRedo, clear()
+  [ ] CanvasController extends ChangeNotifier:
+        addLayer(), removeLayer(), updateLayer(), reorderLayers()
+        duplicateLayer(), toggleVisibility(), toggleLock()
+        selectLayer(), addToSelection(), clearSelection()
+        moveLayer(), resizeLayer(), rotateLayer()
+        undo(), redo() — delegates to HistoryManager
+        toJson(), fromJson()
+  [ ] Every mutation: push snapshot to history BEFORE applying change
+  [ ] Write unit tests: test/unit/state/canvas_controller_test.dart
+  [ ] Write unit tests: test/unit/state/history_manager_test.dart
+
+Acceptance criteria:
+  → 10-step undo/redo works correctly
+  → Mutations are non-destructive (immutable doc pattern)
+  → Tests pass: flutter test test/unit/state/
+
+──────────────────────────────────────────────────────────────────────────────────
+MILESTONE 1.3 — Canvas Rendering (Day 6–10)
+────────────────────────────────────────────
+Files to implement:
+  lib/src/rendering/canvas_painter.dart
+  lib/src/rendering/layer_renderer.dart
+  lib/src/widgets/canvas_view.dart
+
+Tasks:
+  [ ] CanvasPainter extends CustomPainter:
+        Iterate layers in z-index order
+        Call LayerRenderer.render(layer, canvas) for each visible layer
+        shouldRepaint() returns true only when document changes
+  [ ] LayerRenderer — per-layer paint logic:
+        ImageLayer  → canvas.drawImageRect + ColorFilter + ImageFilter
+        TextLayer   → TextPainter.layout() + TextPainter.paint()
+        ShapeLayer  → drawRect / drawOval / drawPath
+        StickerLayer→ drawImage (cached ui.Image)
+        PaintLayer  → drawPath per stroke
+  [ ] CanvasView widget:
+        InteractiveViewer (pinch-zoom, pan)
+        RepaintBoundary wrapping CustomPaint
+        GestureDetector for tap/double-tap on canvas background
+  [ ] Cache ui.Image per layer (only reload on URL change)
+  [ ] Wrap each layer in its own RepaintBoundary
+
+Acceptance criteria:
+  → All 5 layer types render correctly on screen
+  → 60fps maintained during scroll/zoom with 10+ layers
+  → Golden test: test/golden/canvas_render_golden_test.dart
+
+──────────────────────────────────────────────────────────────────────────────────
+MILESTONE 1.4 — Gesture System (Day 11–14)
+────────────────────────────────────────────
+Files to implement:
+  lib/src/utils/gesture_handler.dart
+  lib/src/widgets/canvas_view.dart (extend)
+
+Tasks:
+  [ ] Single tap → selectLayer() (hit-test by position)
+  [ ] Double tap → enter edit mode (text) or show context menu (others)
+  [ ] Drag → moveLayer() with delta
+  [ ] Two-finger pinch → resizeLayer() proportionally
+  [ ] Two-finger rotate → rotateLayer() by angle delta
+  [ ] Long press → show context menu (duplicate / lock / delete)
+  [ ] Double tap canvas background → clearSelection()
+  [ ] Selection handles: draw 8 resize handles + 1 rotation handle around selected layer
+  [ ] Snap-to-center lines: show guide when layer aligns with canvas center or other layer edge
+  [ ] Hit-test respects layer z-order (topmost layer gets tap first)
+
+Acceptance criteria:
+  → All gestures work on physical device (Android + iOS)
+  → Snap guides appear and disappear correctly
+  → Selection handles visible and functional
+
+──────────────────────────────────────────────────────────────────────────────────
+MILESTONE 1.5 — Image Export (Day 15–16)
+──────────────────────────────────────────
+Files to implement:
+  lib/src/rendering/export_renderer.dart
+  lib/src/modules/export/export_handler.dart
+
+Tasks:
+  [ ] ExportRenderer.renderToBytes():
+        PictureRecorder → Canvas → CanvasPainter (isExporting: true)
+        picture.toImage() at full resolution (pixelRatio 3.0)
+        toByteData(ImageByteFormat.png / jpg)
+  [ ] ExportHandler.exportImage() — routes to ExportRenderer
+  [ ] CanvasController.renderToImage() public method
+  [ ] CanvasController.buildExportConfig() — auto-detects output type
+
+Acceptance criteria:
+  → Exported PNG/JPG is pixel-perfect at 3x resolution
+  → Export completes in < 500ms for 1080x1080 canvas
+
+──────────────────────────────────────────────────────────────────────────────────
+MILESTONE 1.6 — Main Widget Shell (Day 17–18)
+───────────────────────────────────────────────
+Files to implement:
+  lib/src/widgets/canvas_editor_widget.dart
+  lib/src/widgets/canvas_editor_config.dart
+  lib/src/widgets/toolbars/main_toolbar.dart (shell only)
+
+Tasks:
+  [ ] CanvasEditorWidget: top-level stateful widget
+        Accepts controller, config, all callbacks
+        Renders: top bar + canvas area + bottom toolbar
+  [ ] CanvasEditorConfig: all feature flags and behavior toggles
+        enableUndo, enableRedo, enableLayerPanel, enableSnapLines
+        maxLayers, maxUndoSteps, minFontSize, maxFontSize
+        allowedExportFormats, snapThreshold etc.
+  [ ] Wire export button → ExportHandler
+  [ ] Wire undo/redo buttons → CanvasController
+
+PHASE 1 DONE WHEN:
+  ✅ Canvas renders all layer types
+  ✅ Gestures fully working (move, resize, rotate, select)
+  ✅ Undo/redo 50-step working
+  ✅ PNG/JPG export working
+  ✅ All unit + golden tests passing
+  ✅ Example app shows a blank canvas with 2-3 hardcoded test layers
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 2 — IMAGE + TEXT TOOLS
+Weeks: 4–5  |  Output: Full image editing toolkit + text editor with Indic support
+             + effects + background removal — all 100% on-device.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MILESTONE 2.1 — Text Editing Module (Day 19–22)
+─────────────────────────────────────────────────
+Files to implement:
+  lib/src/modules/text/text_edit_controller.dart
+  lib/src/modules/text/indic_font_support.dart
+  lib/src/utils/text_fit_util.dart
+  lib/src/utils/font_loader.dart
+  lib/src/widgets/toolbars/text_toolbar.dart
+  lib/src/widgets/pickers/font_picker.dart
+  lib/src/widgets/pickers/color_picker.dart
+
+Tasks:
+  [ ] Double-tap TextLayer → enterTextEditMode():
+        Overlay TextField appears above canvas at layer position
+        TextEditingController bound to layer text
+        Keyboard opens automatically
+  [ ] text_toolbar.dart: Font picker | Color picker | Size slider | Alignment buttons
+  [ ] font_picker.dart:
+        Horizontal scroll list of fonts
+        GoogleFonts.getFont() dynamic load
+        Group by: Latin / Indic sections
+        Show recent 5 fonts at top
+  [ ] indic_font_support.dart:
+        Load Noto Sans Devanagari, Bengali, Tamil, Telugu, Gujarati, Kannada, Malayalam
+        from assets/fonts/indic/ (declare in pubspec.yaml flutter.fonts)
+        Flutter HarfBuzz handles shaping automatically — no extra logic needed
+  [ ] color_picker.dart:
+        Material color grid (quick pick)
+        HSV wheel (custom)
+        Recent colors list (last 10, saved in memory)
+  [ ] text_fit_util.dart: autoFitFontSize(text, fontFamily, bounds, max, min)
+        Uses TextPainter.layout() to measure
+        Binary search between min and max for performance
+  [ ] font_loader.dart: loadGoogleFont(), loadAssetFont(), loadNetworkFont()
+  [ ] Write unit tests: test/unit/modules/text_fit_util_test.dart
+        Test with long Devanagari text
+        Test with very short bounds
+        Test binary search performance
+
+Acceptance criteria:
+  → Double tap TextLayer opens editor, keyboard appears
+  → Font changes reflect instantly in canvas (live preview)
+  → Indic text (Devanagari/Bengali) renders with correct shaping + conjuncts
+  → autoFitFontSize works for all scripts
+  → Color picker saves recent colors
+
+──────────────────────────────────────────────────────────────────────────────────
+MILESTONE 2.2 — Image Tools (Day 23–26)
+─────────────────────────────────────────
+Files to implement:
+  lib/src/modules/image/image_manipulation.dart
+  lib/src/modules/image/crop_handler.dart
+  lib/src/modules/effects/effect_engine.dart
+  lib/src/widgets/toolbars/image_toolbar.dart
+  lib/src/widgets/pickers/effect_picker.dart
+
+Tasks:
+  [ ] Replace image: ImagePicker → new URL/localPath → updateLayer()
+  [ ] Crop: delegate to image_cropper package → receive cropped file → update ImageLayer
+  [ ] EffectEngine — ColorFilter matrix builder:
+        brightness(double) → 4x5 matrix
+        contrast(double)   → 4x5 matrix
+        saturation(double) → 4x5 matrix
+        sepia()            → preset matrix
+        Combine multiple matrices into one (multiply)
+  [ ] Blur: ImageFilter.blur(sigmaX, sigmaY) applied at paint time
+  [ ] Vignette: radial gradient overlay drawn on top of image in LayerRenderer
+  [ ] effect_picker.dart: horizontal slider per effect with live canvas preview
+  [ ] Live preview strategy: apply at 400px downscaled during drag, full-res on release
+  [ ] image_toolbar.dart: Replace | Crop | Filters | Remove Background buttons
+
+Acceptance criteria:
+  → All effects apply in real-time during slider drag (no lag on mid-range devices)
+  → Crop works on both Android and iOS via image_cropper
+  → Vignette renders correctly without border artifacts
+
+──────────────────────────────────────────────────────────────────────────────────
+MILESTONE 2.3 — Background Removal (Day 27–28)
+────────────────────────────────────────────────
+Files to implement:
+  lib/src/modules/bg_removal/bg_removal_service.dart
+  lib/src/modules/bg_removal/bg_removal_config.dart
+  lib/src/platform/android/android_bg_removal.dart
+  lib/src/platform/ios/ios_bg_removal.dart
+
+Tasks:
+  [ ] BgRemovalConfig: mode (onDevice | backendApi | tiered), onnxThreshold, smoothMask
+  [ ] BgRemovalService.removeBackground(Uint8List imageBytes):
+        mode=onDevice  → image_background_remover ONNX pipeline
+        mode=backendApi→ call host app's onBackgroundRemovalRequested callback
+        mode=tiered    → try onDevice; on failure call backendApi
+  [ ] Show loading state in ImageLayer during processing
+  [ ] On success: update ImageLayer with transparent PNG, hasTransparentBg=true
+  [ ] Error handling: show retry dialog on failure
+  [ ] android_bg_removal.dart: ML Kit Selfie Segmentation (for people/portraits fast path)
+  [ ] ios_bg_removal.dart: Apple Vision VNGeneratePersonSegmentationRequest
+
+Acceptance criteria:
+  → Product image BG removed correctly on-device (no backend call)
+  → Loading indicator shown during processing
+  → Error + retry works gracefully
+
+──────────────────────────────────────────────────────────────────────────────────
+MILESTONE 2.4 — Layer Panel (Day 29–30)
+─────────────────────────────────────────
+Files to implement:
+  lib/src/widgets/panels/layer_panel.dart
+
+Tasks:
+  [ ] ReorderableListView — drag to reorder = reorderLayers() call
+  [ ] Each row: layer type icon | thumbnail | name | visibility toggle | delete button
+  [ ] Tap row → selectLayer() in controller → highlights in canvas
+  [ ] Swipe-to-delete → removeLayer()
+  [ ] Long-press → context menu: Duplicate | Lock/Unlock | Rename
+  [ ] Layer thumbnail: mini CustomPaint of single layer (50x50)
+  [ ] Synced with canvas selection (controller.selectedLayerId listener)
+
+PHASE 2 DONE WHEN:
+  ✅ Full text editing working (font/color/size/align) with Indic script support
+  ✅ Image replace/crop/filters/effects working
+  ✅ Background removal working on-device
+  ✅ Layer panel with drag-reorder working
+  ✅ Example app: add text, change font to Devanagari, apply effect, export PNG
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 3 — TEMPLATES + BRAND AUTO-FILL
+Week: 6  |  Output: Full template system + brand auto-fill — AdBanao's killer feature.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MILESTONE 3.1 — Template System (Day 31–33)
+─────────────────────────────────────────────
+Files to implement:
+  lib/src/models/template_manifest.dart
+  lib/src/providers/template_provider.dart
+  lib/src/providers/sticker_provider.dart
+
+Tasks:
+  [ ] TemplateManifest model: id, name, category, ratio, type, layers[], thumbnailUrl, tags
+  [ ] TemplateAspectRatio enum: square_1x1 | portrait_9x16 | landscape_16x9 | a4_print
+  [ ] abstract TemplateProvider interface:
+        fetchTemplates({category, ratio, type, page, pageSize})
+        fetchTemplateById(String id)
+  [ ] AssetTemplateProvider (bundled starter templates):
+        Reads from assets/templates/starter/*.json
+        Returns parsed TemplateManifest list
+  [ ] Bundle 5 starter templates in assets/templates/starter/:
+        blank_square.json
+        blank_portrait.json
+        simple_business_card.json
+        simple_sale_poster.json
+        simple_festival_post.json
+  [ ] CanvasController.loadTemplate(TemplateManifest):
+        Clears current document
+        Loads template layers into new CanvasDocument
+        Resets history
+  [ ] abstract StickerProvider interface:
+        fetchCategories()
+        fetchStickers({categoryId, page})
+
+Acceptance criteria:
+  → AssetTemplateProvider loads and parses all 5 starter templates correctly
+  → Template JSON validates against schema_version: "1.0"
+  → Switching templates clears canvas and loads new layers
+
+──────────────────────────────────────────────────────────────────────────────────
+MILESTONE 3.2 — Brand Auto-Fill (Day 34–36)
+─────────────────────────────────────────────
+Files to implement:
+  lib/src/models/brand_profile.dart
+  lib/src/modules/brand/brand_autofill.dart
+
+Tasks:
+  [ ] BrandProfile model: businessName, logoUrl, phone, address, tagline
+  [ ] BrandAutoFill.apply(CanvasDocument doc, BrandProfile profile):
+        Iterate all layers with placeholderName != null
+        Match: "business_name" → TextLayer.text = profile.businessName
+        Match: "phone"         → TextLayer.text = profile.phone
+        Match: "address"       → TextLayer.text = profile.address
+        Match: "tagline"       → TextLayer.text = profile.tagline
+        Match: "logo"          → ImageLayer.imageUrl = profile.logoUrl
+        After each TextLayer replacement → autoFitFontSize()
+        Returns new CanvasDocument (immutable)
+  [ ] CanvasController.applyBrandProfile(): calls BrandAutoFill, pushes ONE history entry
+  [ ] Write unit tests: test/unit/modules/brand_autofill_test.dart
+        Test long business name → font auto-shrinks
+        Test missing placeholder → no crash
+        Test logo URL replacement
+
+Acceptance criteria:
+  → Brand fill replaces all placeholders in < 100ms
+  → Long text auto-shrinks to fit layer bounds
+  → Entire fill is a single undo step
+  → Unit tests pass
+
+──────────────────────────────────────────────────────────────────────────────────
+MILESTONE 3.3 — Sticker / Shape Tools (Day 37–38)
+───────────────────────────────────────────────────
+Files to implement:
+  lib/src/widgets/panels/sticker_picker_panel.dart
+
+Tasks:
+  [ ] sticker_picker_panel.dart: Grid of stickers from StickerProvider
+  [ ] Tap sticker → addLayer(StickerLayer) at canvas center
+  [ ] Shapes panel: rectangle | circle | triangle | line | polygon options
+  [ ] Tap shape → addLayer(ShapeLayer) with default fill/stroke
+  [ ] ShapeLayer toolbar: fill color | stroke color | stroke width slider
+
+PHASE 3 DONE WHEN:
+  ✅ 5 starter templates load from assets
+  ✅ Brand auto-fill replaces all placeholders correctly
+  ✅ Sticker/shape tools working
+  ✅ Example app: load template → fill brand info → export
+  ✅ Unit tests for brand fill pass
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 4 — AUDIO + VIDEO EXPORT
+Weeks: 7–8  |  Output: Full audio picker + on-device video export via FFmpeg.
+             Image + audio → MP4. Video template editing. All on-device.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MILESTONE 4.1 — Audio Module (Day 39–43)
+──────────────────────────────────────────
+Files to implement:
+  lib/src/models/audio_config.dart
+  lib/src/modules/audio/audio_track_model.dart
+  lib/src/modules/audio/audio_library_controller.dart
+  lib/src/providers/audio_provider.dart
+  lib/src/widgets/panels/audio_picker_panel.dart
+
+Tasks:
+  [ ] AudioTrack model: id, name, artist, duration, fullUrl, previewUrl,
+        thumbnailUrl, festival, isPremium, waveformDataUrl
+  [ ] AudioConfig model: trackId, trackUrl, previewUrl, startOffset,
+        fadeInSeconds, fadeOutSeconds
+  [ ] abstract AudioProvider interface:
+        fetchTracks({festival, page})
+        fetchCategories()
+        fetchUserUploads()
+        uploadAudio(localFilePath)
+        canAccessTrack(AudioTrack)
+  [ ] AudioLibraryController (ChangeNotifier):
+        loadCategory(festival) → calls provider.fetchTracks()
+        previewTrack(track) → just_audio streaming playback from previewUrl
+        stopPreview()
+        selectTrack(track) → checks canAccessTrack → sets selectedTrack
+        onUpgradeRequired callback for locked tracks
+        Auto-stop previous preview when new one starts
+  [ ] audio_picker_panel.dart:
+        Festival category tabs (horizontal scroll)
+        Vertical track list: name | duration | play button | select checkmark
+        Lock icon for isPremium tracks
+        "My Uploads" section at bottom
+        Waveform placeholder (static image from waveformDataUrl if available)
+  [ ] CanvasController.setAudio(AudioConfig?)
+  [ ] Bundle 2 royalty-free tracks in assets/audio/starter/ (MP3, <500KB each)
+
+Acceptance criteria:
+  → Preview plays and pauses correctly
+  → Previous preview stops when new one starts
+  → Premium tracks show lock icon, trigger onUpgradeRequired callback
+  → Selected track shows checkmark and attaches to CanvasDocument.audio
+
+──────────────────────────────────────────────────────────────────────────────────
+MILESTONE 4.2 — Video Trim Module (Day 44–46)
+───────────────────────────────────────────────
+Files to implement:
+  lib/src/models/export/video_trim_config.dart
+  lib/src/state/video_trim_state.dart
+  lib/src/modules/video/video_trim_widget.dart
+  lib/src/modules/video/crop_grid_widget.dart
+  lib/src/modules/video/cover_selection_widget.dart
+  lib/src/rendering/video_thumbnail_strip.dart
+  lib/src/widgets/toolbars/video_toolbar.dart
+
+Tasks:
+  [ ] VideoTrimConfig: startTrim, endTrim, minCrop, maxCrop, rotation, selectedCover
+  [ ] VideoTrimState: manages trim handles, current position, thumbnail list
+  [ ] video_thumbnail_strip.dart: generate N thumbnails via video_thumbnail package
+        Display as horizontal strip behind trim slider
+  [ ] video_trim_widget.dart: draggable start/end handles on thumbnail strip
+  [ ] crop_grid_widget.dart: crop overlay on video frame (normalized 0.0–1.0)
+  [ ] cover_selection_widget.dart: select still frame as video cover
+  [ ] video_toolbar.dart: Trim | Crop | Rotate | Cover buttons
+  [ ] CanvasController.updateTrim(), updateCrop(), rotateVideo90(), setSelectedCover()
+
+──────────────────────────────────────────────────────────────────────────────────
+MILESTONE 4.3 — FFmpeg Export (Day 47–52)
+───────────────────────────────────────────
+Files to implement:
+  lib/src/modules/export/ffmpeg_command_builder.dart
+  lib/src/modules/export/export_handler.dart
+  lib/src/modules/animation/animation_preview.dart
+
+Tasks:
+  [ ] FFmpegCommandBuilder.build(ExportConfig) → returns FFmpeg command string
+        Case 1: staticImage → skip (use ExportRenderer)
+        Case 2: slideshowVideo (image + audio, no animations):
+                -loop 1 -i poster.png -i audio.mp3 -t {duration}
+                -af "afade=in:d=0.5,afade=out:st={dur-1}:d=1"
+                -vf "scale={w}:{h},fps=1" -shortest output.mp4
+        Case 3: animatedVideo (image + animation layers + audio):
+                -i base.png -i audio.mp3
+                filter_complex for each animation layer:
+                  fade: fade=in:st={start}:d={dur}
+                  slide_left: overlay=x='if(lt(t,{start}),W,W-(W*(t-{start})/{dur}))':y=0
+                  zoom: scale=iw*(1+0.1*t):ih*(1+0.1*t) (simplified)
+        Case 4: videoTemplate: full -i video.mp4 + overlay + audio mix
+        Apply watermark if applyWatermark=true:
+                -i watermark.png -filter_complex "overlay=10:10"
+  [ ] ExportHandler.export(ExportConfig):
+        If staticImage → ExportRenderer.renderToBytes()
+        If video type → ExportRenderer renders canvas to PNG first
+                      → FFmpegCommandBuilder.build() → get command string
+                      → FFmpegKit.executeAsync(command, onComplete)
+                      → Save output to path_provider temp dir
+                      → image_gallery_saver to device gallery
+  [ ] animation_preview.dart: lightweight flutter AnimationController-based preview
+        (editor only — just shows entry animation once on tap, not a loop)
+  [ ] Write unit tests: test/unit/modules/export_config_test.dart
+        Test auto-resolution of outputType (image+audio→slideshowVideo)
+        Test FFmpeg command string for each case
+
+Acceptance criteria:
+  → Image-only export: PNG correct, < 500ms
+  → Image + audio: MP4 generated on-device, audio synced
+  → Video trim: output trimmed correctly to start/end
+  → Watermark applied at correct position
+  → Export saves to device gallery on both Android and iOS
+
+PHASE 4 DONE WHEN:
+  ✅ Audio picker working with preview playback
+  ✅ Video trim UI working
+  ✅ FFmpeg on-device export: image→PNG, image+audio→MP4, video→MP4
+  ✅ Watermark working
+  ✅ Example app: pick template → add brand → add music → export MP4
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PHASE 5 — DEVELOPER CUSTOMIZATION + EXAMPLE APP + POLISH
+Week: 9–10  |  Output: Complete SDK ready for pub.dev + full example app
+              demonstrating every feature.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MILESTONE 5.1 — Full Theme + Customization System (Day 53–56)
+───────────────────────────────────────────────────────────────
+Files to implement:
+  lib/src/theme/canvas_editor_theme.dart
+  lib/src/theme/canvas_editor_icons.dart
+  lib/src/theme/canvas_font_config.dart
+  lib/src/theme/canvas_toolbar_config.dart
+  lib/src/widgets/slots/slot_overrides.dart
+  lib/src/localization/canvas_editor_localizations.dart
+
+Tasks:
+  [ ] CanvasEditorTheme (ThemeExtension):
+        toolbarBackground, toolbarIconColor, toolbarSelectedIconColor
+        canvasBackground, canvasBorderColor, canvasShadow
+        selectionBorderColor, selectionHandleColor, selectionHandleSize
+        handleShape (circle | square | diamond)
+        snapLineColor, snapLineWidth
+        layerPanelBackground, layerItemSelectedColor
+        primaryButtonStyle, secondaryButtonStyle
+        toolbarAnimationDuration, toolbarAnimationCurve
+        factory CanvasEditorTheme.dark()
+        factory CanvasEditorTheme.light()
+        copyWith(), lerp() (ThemeExtension requirements)
+  [ ] CanvasEditorIcons: full icon override map (undo, redo, text, image,
+        sticker, shapes, effects, audio, layers, animations, download, save,
+        brandFill, delete, duplicate, lock, visibility, crop, removeBackground)
+  [ ] CanvasFontConfig:
+        googleFontNames: List<String>
+        assetFonts: List<CustomFontAsset>
+        networkFonts: List<CustomFontUrl>
+        includeDevanagari, includeBengali, includeTamil, ... (per-script toggle)
+        groupByScript, maxRecentFonts, defaultFontFamily
+  [ ] CanvasToolbarConfig:
+        items: List<ToolbarItem> (BuiltInTool | ToolbarSeparator | CustomTool)
+        layout: ToolbarLayout (bottom | top | left | right | floating)
+        showLabels, iconSize
+        CustomTool: id, icon, label, panelBuilder(context, controller) → Widget
+  [ ] SlotOverrides (all builder typedefs):
+        topBarBuilder, exportButtonBuilder, colorPickerBuilder
+        fontPickerBuilder, layerItemBuilder, exportProgressBuilder
+        emptyStateBuilder, waveformBuilder
+  [ ] CanvasEditorLocalizations:
+        All UI strings (tool names, button labels, error messages, dialogs)
+        factory .english(), .hindi(), .marathi(), .bengali()
+
+Acceptance criteria:
+  → Host app can override any icon with one line
+  → Host app can inject custom font (asset, Google, or URL) with one config object
+  → Custom tool with custom panel injects into toolbar correctly
+  → Dark and light themes both look polished
+  → All 4 locale presets have complete string coverage
+
+──────────────────────────────────────────────────────────────────────────────────
+MILESTONE 5.2 — Behavioral Hooks + Feature Gates (Day 57–58)
+──────────────────────────────────────────────────────────────
+Files to implement:
+  lib/src/widgets/canvas_editor_widget.dart (finalize)
+  lib/src/widgets/canvas_editor_config.dart (finalize)
+
+Tasks:
+  [ ] All lifecycle callbacks wired in CanvasEditorWidget:
+        onEditorReady, onLayerAdded, onLayerDeleted, onLayerSelected
+        onTextEditingStart, onTextEditingEnd
+        onExportImage, onExportVideoConfig, onSaveDraft, onDraftLoaded
+        onSnapLineHit, onCanvasTap, onLayerDoubleTap
+        onBackgroundRemovalRequested
+  [ ] Permission hooks:
+        canDeleteLayer(Layer) → bool
+        canMoveLayer(Layer) → bool
+        canAddLayer() → bool
+  [ ] Feature gates:
+        isFeatureEnabled(EditorFeature) → bool
+        onFeatureLocked(EditorFeature) callback
+        EditorFeature enum: removeBackground, videoExport, unlimitedAudio,
+          animations, effects, brandFill, stickers, shapes, layerPanel
+  [ ] All slot override builders wired into widget tree
+
+──────────────────────────────────────────────────────────────────────────────────
+MILESTONE 5.3 — Offline Support (Day 59)
+──────────────────────────────────────────
+Files to implement:
+  lib/src/utils/connectivity_watcher.dart
+  lib/src/utils/cache_manager.dart
+
+Tasks:
+  [ ] ConnectivityWatcher: Stream<bool> isOnline using connectivity_plus
+  [ ] OfflineBannerWidget: AnimatedContainer shown at top when offline
+  [ ] CacheManager: wrap flutter_cache_manager for template + sticker assets
+  [ ] CanvasEditorConfig.enableOfflineMode toggle
+  [ ] When offline: disable export button if video export is backend-based
+        (local FFmpeg export still works)
+
+──────────────────────────────────────────────────────────────────────────────────
+MILESTONE 5.4 — Complete Example App (Day 60–63)
+──────────────────────────────────────────────────
+Files to implement:
+  example/lib/main.dart
+  example/lib/screens/editor_screen.dart
+  example/lib/screens/template_picker_screen.dart
+  example/lib/screens/brand_profile_screen.dart
+  example/lib/screens/export_result_screen.dart
+  example/lib/providers/example_template_provider.dart
+  example/lib/providers/example_audio_provider.dart
+  example/lib/providers/example_sticker_provider.dart
+
+Tasks:
+  [ ] ExampleTemplateProvider: implements TemplateProvider
+        Loads from example/assets/templates/ (JSON files)
+        Returns 5–8 demo templates across categories
+  [ ] ExampleAudioProvider: implements AudioProvider
+        Loads from example/assets/audio/ (2–3 starter MP3s)
+        All tracks isPremium=false for demo
+  [ ] ExampleStickerProvider: implements StickerProvider
+        Returns list of sticker URLs from assets/stickers/
+  [ ] template_picker_screen.dart:
+        Grid of template thumbnails
+        Tap → loads into editor
+        Filter tabs: All | Image | Video | Festival | Business
+  [ ] brand_profile_screen.dart:
+        Form: business name, phone, address, tagline
+        Logo picker (ImagePicker)
+        "Apply to canvas" button → canvasController.applyBrandProfile()
+  [ ] editor_screen.dart:
+        Full CanvasEditorWidget integration
+        Top bar: back | undo | redo | brand fill | save | export
+        Demonstrates: dark theme + custom icon for export button
+        Demonstrates: Hindi locale
+  [ ] export_result_screen.dart:
+        Shows exported image/video preview
+        Share buttons: WhatsApp | Instagram | Download
+  [ ] Demonstrate ALL customization features in example:
+        Custom theme (dark, amber accent)
+        Custom toolbar with a "QR Code" CustomTool (static demo, no real QR)
+        Hindi localization
+        Devanagari font in font picker
+
+──────────────────────────────────────────────────────────────────────────────────
+MILESTONE 5.5 — Tests + Polish + Publish Prep (Day 64–70)
+───────────────────────────────────────────────────────────
+Tasks:
+  [ ] Complete all unit tests (target: 80%+ coverage on models + state + modules)
+  [ ] Widget tests: test/widget/canvas_editor_widget_test.dart
+        Render canvas with 5 layers
+        Tap to select layer
+        Undo/redo sequence
+  [ ] Golden tests: test/golden/canvas_render_golden_test.dart
+        1080x1080 canvas with all 5 layer types
+        Update goldens: flutter test --update-goldens
+  [ ] Integration test: test/integration/export_flow_test.dart
+        Load template → apply brand → export PNG → verify bytes non-empty
+  [ ] Performance audit:
+        Profile on mid-range Android (Snapdragon 600-series or equivalent)
+        Confirm 60fps on canvas with 10 layers
+        Confirm export < 500ms for PNG
+  [ ] Size audit:
+        flutter build apk --release --tree-shake-icons
+        Verify core SDK adds < 5MB (excluding ONNX + FFmpeg optional deps)
+  [ ] API documentation: add dartdoc comments to all public classes/methods
+  [ ] CHANGELOG.md: document all features per phase
+  [ ] LICENSE: MIT
+  [ ] pubspec.yaml: finalize description, homepage, repository, topics
+  [ ] README.md: full quick-start, feature list, customization examples
+  [ ] flutter pub publish --dry-run → fix all warnings
+  [ ] flutter pub publish → publish to pub.dev
+
+PHASE 5 DONE WHEN:
+  ✅ All customization (theme/icons/fonts/toolbar/hooks/gates) working
+  ✅ Example app demonstrates every single feature
+  ✅ All tests passing (unit + widget + golden + integration)
+  ✅ flutter analyze shows zero issues
+  ✅ flutter pub publish --dry-run shows zero errors
+  ✅ README has working code samples
+  ✅ SDK is ready for pub.dev publish
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MASTER CHECKLIST — SDK COMPLETE WHEN ALL TICKED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CORE ENGINE
+  [ ] All 5 layer types render correctly
+  [ ] Gestures: tap select, drag move, pinch resize, two-finger rotate
+  [ ] Snap lines on center + edge alignment
+  [ ] Undo/redo 50-step
+  [ ] PNG/JPG export < 500ms
+
+IMAGE + TEXT TOOLS
+  [ ] Text edit: font, color, size, alignment
+  [ ] Indic fonts: Devanagari, Bengali, Tamil render with correct shaping
+  [ ] autoFitFontSize works for all scripts
+  [ ] Image: replace, crop, brightness/contrast/saturation/blur/vignette
+  [ ] Background removal on-device (ONNX)
+  [ ] Layer panel with drag-reorder
+
+TEMPLATES + BRAND
+  [ ] Template JSON schema v1.0
+  [ ] TemplateProvider interface
+  [ ] AssetTemplateProvider with 5 starter templates
+  [ ] Brand auto-fill with placeholderName matching
+  [ ] Text auto-shrink on overflow
+
+AUDIO + VIDEO
+  [ ] AudioProvider interface
+  [ ] Audio preview with just_audio
+  [ ] Video trim UI
+  [ ] FFmpeg: image→PNG, image+audio→MP4, animated→MP4
+  [ ] Watermark overlay
+
+CUSTOMIZATION
+  [ ] CanvasEditorTheme (ThemeExtension, dark/light presets)
+  [ ] CanvasEditorIcons (full override map)
+  [ ] CanvasFontConfig (Google + asset + network + per-script Indic)
+  [ ] CanvasToolbarConfig (custom tool injection)
+  [ ] All widget slot overrides (8 builder slots)
+  [ ] All behavioral hooks + callbacks
+  [ ] Feature gates (isFeatureEnabled + onFeatureLocked)
+  [ ] CanvasEditorLocalizations (EN + HI + MR + BN)
+
+EXAMPLE APP
+  [ ] Template picker screen
+  [ ] Full editor screen with all tools
+  [ ] Brand profile screen
+  [ ] Export result + share screen
+  [ ] Demonstrates custom theme + Hindi locale + custom tool
+
+QUALITY
+  [ ] flutter analyze → zero issues
+  [ ] 80%+ unit test coverage
+  [ ] Golden tests for all layer types
+  [ ] Integration test: template→brand→export
+  [ ] flutter pub publish --dry-run → zero errors
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FILE IMPLEMENTATION ORDER (START HERE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Week 1 — implement in this exact order:
+  1.  lib/src/models/layer/layer.dart               ← everything depends on this
+  2.  lib/src/models/layer/text_layer.dart
+  3.  lib/src/models/layer/image_layer.dart
+  4.  lib/src/models/layer/shape_layer.dart
+  5.  lib/src/models/layer/sticker_layer.dart
+  6.  lib/src/models/layer/paint_layer.dart
+  7.  lib/src/models/canvas_document.dart
+  8.  lib/src/models/effect_config.dart
+  9.  lib/src/models/animation_config.dart
+  10. lib/src/state/history_manager.dart
+  11. lib/src/state/canvas_controller.dart
+  12. lib/src/rendering/layer_renderer.dart
+  13. lib/src/rendering/canvas_painter.dart
+  14. lib/src/widgets/canvas_view.dart
+  15. lib/src/utils/gesture_handler.dart
+  16. lib/src/rendering/export_renderer.dart
+  17. lib/src/modules/export/export_handler.dart
+  18. lib/src/widgets/canvas_editor_config.dart
+  19. lib/src/widgets/canvas_editor_widget.dart      ← wire everything together
+  20. example/lib/main.dart                          ← run and verify Phase 1
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+END OF PLAN
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

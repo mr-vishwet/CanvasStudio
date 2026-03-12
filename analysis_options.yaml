@@ -1,4 +1,17 @@
 include: package:flutter_lints/flutter.yaml
 
-# Additional information about this file can be found at
-# https://dart.dev/guides/language/analysis-options
+analyzer:
+  errors:
+    missing_required_param: error
+    missing_return: error
+  exclude:
+    - "**/*.g.dart"
+
+linter:
+  rules:
+    - prefer_const_constructors
+    - prefer_final_fields
+    - avoid_print
+    - use_key_in_widget_constructors
+    - always_declare_return_types
+    - sort_pub_dependencies
