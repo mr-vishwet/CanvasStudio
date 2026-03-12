@@ -46,7 +46,6 @@ dependencies:
   in_app_purchase: ^3.1.13
 
   # Export / save to gallery
-  image_gallery_saver: ^2.0.3
   path_provider: ^2.1.2
   dio: ^5.4.3
 
@@ -71,3 +70,7 @@ flutter:
     - assets/stickers/default/
     - assets/audio/starter/
     - assets/icons/
+
+
+#  flutter pub get
+#  dart run build_runner build --delete-conflicting-outputs

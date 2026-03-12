@@ -1,10 +1,14 @@
 import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
 import '../models/layer/layers.dart';
 import '../models/effect_config.dart';
 
 class LayerRenderer {
   static final Map<String, ui.Image> _imageCache = {};
+
+  static bool hasCache(String key) => _imageCache.containsKey(key);
+
 
   static void render(Layer layer, Canvas canvas, {bool isExporting = false}) {
     if (!layer.isVisible) return;
@@ -256,9 +260,12 @@ class LayerRenderer {
     _imageCache[key] = image;
   }
 
+
+
   static void evictImage(String key) {
     _imageCache.remove(key);
   }
+
 
   static void clearCache() {
     _imageCache.clear();
