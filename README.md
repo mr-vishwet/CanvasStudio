@@ -8,7 +8,7 @@
 
 **canvas_studio** is a Flutter SDK that host apps embed to give their users a full-featured image and video editing canvas — no backend required for 91% of features.
 
-![Canvas Studio Hero — Canvas Editor UI](example/assets/screenshots/hero-canvas.png)
+![Canvas Studio Hero — Canvas Editor UI](example/assets/screenshots/hero-canvas.jpg)
 
 ### The Vision
 
@@ -26,16 +26,21 @@ When complete, your host app will ship a complete canvas editor where users can:
 
 ## 🎨 Design System & AI Image Prompts
 
-Rather than shipping static mockups, the visual identity is defined by AI image generation prompts. Run these in Midjourney, DALL-E, or Stable Diffusion to produce on-brand hero assets for your landing page, app store, or docs.
+The README visuals are **conceptual "idea" illustrations** — they show *what's being built* (a layered canvas, the export pipeline, brand auto-fill) instead of pixel-perfect UI screenshots. Every image is generated for free, straight from the prompts below, in the design tokens underneath.
+
+**Where they were generated:** [FreeGen.app](https://freegen.app) (Z-Image Turbo) for the feature images and [Bing Image Creator](https://www.bing.com/images/create) (MAI-Image-2.6) for the hero — both free, no signup, no watermark. Alternatives tested: Felo AI and Leonardo.ai (login required), AI Free Forever (models overloaded).
 
 ### 🖼️ Hero Image Prompt
 
 ```
-A modern Flutter mobile app canvas editor interface, dark theme with deep purple (#1A1A2E) background, 
-centered 1080x1080 canvas showing "Happy Diwali" in Devanagari script (नमस्ते) with gold accent line, 
-product image layer with background removed, glowing sticker layer, bottom toolbar with text/image/sticker 
-icons, top bar with undo/redo/brand-fill/export buttons, clean minimalist UI, 4K, soft neon accents, 
-glassmorphism, professional SaaS design aesthetic
+Cinematic concept artwork for an image & video editing canvas SDK. A glowing rounded-square
+artboard floats in dark space with layered design elements hovering above it at different
+depths — a photo card, an abstract type block, a star sticker, a flowing paint stroke — each
+casting soft shadows to show z-order layering. Small tool chips orbit the artboard; one warm
+golden export button glows. Wide landscape composition, generous dark negative space.
+Style: dark premium tech illustration, near-black indigo background (#12121e), deep violet
+(#6750A4) glassmorphic panels, warm gold (#FFB000) accent glow, soft neon rim lighting,
+professional SaaS aesthetic. No text, no words, no letters, no numbers, no logos, no watermark.
 ```
 
 **Where to use:** README hero, landing page, app store screenshots
@@ -44,11 +49,13 @@ glassmorphism, professional SaaS design aesthetic
 
 | Feature | AI Image Prompt |
 |---------|----------------|
-| **Text Editing** | "Mobile app text editor overlay on dark canvas, Devanagari Bengali Tamil typography, font picker dropdown, color picker wheel, font size slider, purple and amber accent colors, 4K, clean UI" |
-| **Image Editing** | "Photo editing interface with brightness/contrast/saturation sliders, background removal magic wand effect, product photo with transparent checkered background, dark theme, 4K" |
-| **Video Export** | "Mobile video export screen showing image + audio timeline, MP4 rendering progress bar, FFmpeg pipeline visualization, dark purple theme, 4K" |
-| **Brand Auto-Fill** | "Form with business name phone address tagline fields, logo upload placeholder, 'Apply to Canvas' button, instant text replacement preview on canvas behind form, dark theme, 4K" |
-| **Template Picker** | "Grid of 5 starter templates (square, portrait, landscape, festival poster, business card), thumbnail cards with category tags, filter tabs, dark theme, 4K" |
+| **Text Editing** | "Multilingual Indic typography: three overlapping rounded font cards decorated with elegant abstract calligraphic brush strokes suggesting Devanagari, Bengali and Tamil scripts (decorative marks, not real words), floating color swatches, font-size slider, glowing language pill tags, dark violet + gold" |
+| **Image Editing** | "One-tap background removal: a stylized sneaker floating in center, its background peeling away like a curled sheet of paper revealing a transparency checkerboard, magic wand with sparkles, dark violet + gold" |
+| **Video Export** | "On-device video export: a horizontal film strip and timeline with glowing amber playhead, an audio waveform flowing into a rounded video-file card with a play symbol, circular progress ring, small lightning bolt, dark violet + gold" |
+| **Brand Auto-Fill** | "Brand auto-fill: a poster template card with glowing empty placeholder slots, a floating identity kit (logo, phone, address, tagline chips) sliding into the slots along curved golden arrows, magnetic snap sparkles, dark violet + gold" |
+| **Template Picker** | "Template gallery: a neat grid of floating template cards in mixed aspect ratios (square, portrait, landscape) with abstract layout blocks in violet, teal and gold, category pill tabs above, one card highlighted with a golden selection border, dark violet + gold" |
+
+> Every prompt ends with the shared style suffix above (near-black indigo background, violet glass panels, gold accent glow, no text/watermark) so all six images stay visually consistent.
 
 ### 🎨 Design Tokens
 
@@ -67,13 +74,13 @@ glassmorphism, professional SaaS design aesthetic
 
 | Feature | Description | Status | Preview |
 |---------|-------------|--------|---------|
-| 🖼️ **Layered Canvas** | Text, Image, Shape, Sticker, Paint layers with z-order | ✅ Done | ![Hero](example/assets/screenshots/hero-canvas.png) |
-| 🎬 **Video Export** | Image + audio → MP4 via on-device FFmpeg | ✅ Done | ![Video Export](example/assets/screenshots/feature-video.png) |
-| 🏷️ **Brand Auto-Fill** | PlaceholderName matching + logo injection | ✅ Done | ![Brand Auto-Fill](example/assets/screenshots/feature-brand.png) |
-| 🧹 **BG Removal** | On-device ONNX U2Net (no API cost) | ✅ Done | ![Image Editing](example/assets/screenshots/feature-image.png) |
-| 🌐 **Indic Scripts** | Devanagari, Bengali, Tamil, Telugu, Gujarati | ✅ Done | ![Text Editing](example/assets/screenshots/feature-text.png) |
+| 🖼️ **Layered Canvas** | Text, Image, Shape, Sticker, Paint layers with z-order | ✅ Done | ![Hero](example/assets/screenshots/hero-canvas.jpg) |
+| 🎬 **Video Export** | Image + audio → MP4 via on-device FFmpeg | ✅ Done | ![Video Export](example/assets/screenshots/feature-video.jpg) |
+| 🏷️ **Brand Auto-Fill** | PlaceholderName matching + logo injection | ✅ Done | ![Brand Auto-Fill](example/assets/screenshots/feature-brand.jpg) |
+| 🧹 **BG Removal** | On-device ONNX U2Net (no API cost) | ✅ Done | ![Image Editing](example/assets/screenshots/feature-image.jpg) |
+| 🌐 **Indic Scripts** | Devanagari, Bengali, Tamil, Telugu, Gujarati | ✅ Done | ![Text Editing](example/assets/screenshots/feature-text.jpg) |
 | 🎨 **Full Customization** | Theme, icons, fonts, toolbar, hooks | ✅ Done | |
-| 📦 **Template System** | Pluggable `TemplateProvider` interface | ✅ Done | ![Templates](example/assets/screenshots/feature-templates.png) |
+| 📦 **Template System** | Pluggable `TemplateProvider` interface | ✅ Done | ![Templates](example/assets/screenshots/feature-templates.jpg) |
 | 🎵 **Audio Library** | Pluggable `AudioProvider` with preview | ✅ Done | |
 | ↩️ **Undo/Redo** | 50-step immutable snapshot stack | ✅ Done | |
 | 📐 **Snap Lines** | Center + edge alignment guides | ✅ Done | |
@@ -82,8 +89,6 @@ glassmorphism, professional SaaS design aesthetic
 ---
 
 ## 🏗️ Architecture
-
-![SDK Architecture Diagram](docs/assets/architecture.png)
 
 canvas_studio follows a clean separation between the **SDK core** (pure Dart + Flutter) and the **host app** (providers, UI customization, data):
 
