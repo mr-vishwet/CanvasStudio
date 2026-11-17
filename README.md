@@ -8,6 +8,8 @@
 
 **canvas_studio** is a Flutter SDK that host apps embed to give their users a full-featured image and video editing canvas — no backend required for 91% of features.
 
+![Canvas Studio Hero — Canvas Editor UI](example/assets/screenshots/hero-canvas.png)
+
 ### The Vision
 
 When complete, your host app will ship a complete canvas editor where users can:
@@ -63,23 +65,25 @@ glassmorphism, professional SaaS design aesthetic
 
 ## ✨ Features
 
-| Feature | Description | Status |
-|---------|-------------|--------|
-| 🖼️ **Layered Canvas** | Text, Image, Shape, Sticker, Paint layers with z-order | ✅ Done |
-| 🎬 **Video Export** | Image + audio → MP4 via on-device FFmpeg | ✅ Done |
-| 🏷️ **Brand Auto-Fill** | PlaceholderName matching + logo injection | ✅ Done |
-| 🧹 **BG Removal** | On-device ONNX U2Net (no API cost) | ✅ Done |
-| 🌐 **Indic Scripts** | Devanagari, Bengali, Tamil, Telugu, Gujarati | ✅ Done |
-| 🎨 **Full Customization** | Theme, icons, fonts, toolbar, hooks | ✅ Done |
-| 📦 **Template System** | Pluggable `TemplateProvider` interface | ✅ Done |
-| 🎵 **Audio Library** | Pluggable `AudioProvider` with preview | ✅ Done |
-| ↩️ **Undo/Redo** | 50-step immutable snapshot stack | ✅ Done |
-| 📐 **Snap Lines** | Center + edge alignment guides | ✅ Done |
-| 📱 **Offline-First** | 91% of features work without internet | ✅ Done |
+| Feature | Description | Status | Preview |
+|---------|-------------|--------|---------|
+| 🖼️ **Layered Canvas** | Text, Image, Shape, Sticker, Paint layers with z-order | ✅ Done | ![Hero](example/assets/screenshots/hero-canvas.png) |
+| 🎬 **Video Export** | Image + audio → MP4 via on-device FFmpeg | ✅ Done | ![Video Export](example/assets/screenshots/feature-video.png) |
+| 🏷️ **Brand Auto-Fill** | PlaceholderName matching + logo injection | ✅ Done | ![Brand Auto-Fill](example/assets/screenshots/feature-brand.png) |
+| 🧹 **BG Removal** | On-device ONNX U2Net (no API cost) | ✅ Done | ![Image Editing](example/assets/screenshots/feature-image.png) |
+| 🌐 **Indic Scripts** | Devanagari, Bengali, Tamil, Telugu, Gujarati | ✅ Done | ![Text Editing](example/assets/screenshots/feature-text.png) |
+| 🎨 **Full Customization** | Theme, icons, fonts, toolbar, hooks | ✅ Done | |
+| 📦 **Template System** | Pluggable `TemplateProvider` interface | ✅ Done | ![Templates](example/assets/screenshots/feature-templates.png) |
+| 🎵 **Audio Library** | Pluggable `AudioProvider` with preview | ✅ Done | |
+| ↩️ **Undo/Redo** | 50-step immutable snapshot stack | ✅ Done | |
+| 📐 **Snap Lines** | Center + edge alignment guides | ✅ Done | |
+| 📱 **Offline-First** | 91% of features work without internet | ✅ Done | |
 
 ---
 
 ## 🏗️ Architecture
+
+![SDK Architecture Diagram](docs/assets/architecture.png)
 
 canvas_studio follows a clean separation between the **SDK core** (pure Dart + Flutter) and the **host app** (providers, UI customization, data):
 
