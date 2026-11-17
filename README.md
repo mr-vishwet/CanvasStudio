@@ -9,7 +9,7 @@
 **canvas_studio** is a Flutter SDK that host apps embed to give their users a full-featured image and video editing canvas — no backend required for 91% of features.
 
 <p align="center">
-  <img src="docs/assets/reference/Trip%20Vlog%20Video%20Editor.png" width="340" alt="Canvas Studio video editor — preview, multi-track timeline, layers and export">
+  <img src="docs/assets/reference/Diagonal%20Demo%20App%20Overlay.png" width="340" alt="Canvas Studio demo app — home screen with projects and templates">
 </p>
 
 ### The Vision
@@ -63,24 +63,19 @@ Concept renders of the finished SDK — not literal screenshots, just the idea o
 
 <table>
   <tr>
-    <td align="center"><img src="docs/assets/reference/Diagonal%20Demo%20App%20Overlay.png" width="210" alt="Home screen"><br><sub>Home &amp; projects</sub></td>
-    <td align="center"><img src="docs/assets/reference/Trip%20Vlog%20Video%20Editor.png" width="210" alt="Video editor"><br><sub>Video editor — preview + timeline</sub></td>
+    <td align="center"><img src="docs/assets/reference/Trip%20Vlog%20Video%20Editor.png" width="190" alt="Video editor"><br><sub>Video editor</sub></td>
+    <td align="center"><img src="docs/assets/reference/Coffee%20Vibes%20Mobile%20Design%20Editor.png" width="190" alt="Image editor"><br><sub>Image editor</sub></td>
+    <td align="center"><img src="docs/assets/reference/Diwali%20Poster%20Editor%20Interface%20%281%29.png" width="190" alt="Layer list"><br><sub>Layer list</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/assets/reference/Coffee%20Vibes%20Mobile%20Design%20Editor.png" width="210" alt="Image editor"><br><sub>Image editor — layers</sub></td>
-    <td align="center"><img src="docs/assets/reference/Diwali%20Poster%20Editor%20Interface%20%281%29.png" width="210" alt="Poster editor with layer list"><br><sub>Layer list</sub></td>
+    <td align="center"><img src="docs/assets/reference/Coffee%20Vibes%20Mobile%20Editor.png" width="190" alt="Text editing"><br><sub>Text editing</sub></td>
+    <td align="center"><img src="docs/assets/reference/Sleek%20Sneaker%20Background%20Remover.png" width="190" alt="Background removal"><br><sub>Background removal</sub></td>
+    <td align="center"><img src="docs/assets/reference/Travel%20Vlog%20Music%20Picker.png" width="190" alt="Music picker"><br><sub>Music picker</sub></td>
   </tr>
   <tr>
-    <td align="center"><img src="docs/assets/reference/Coffee%20Vibes%20Mobile%20Editor.png" width="210" alt="Text editing"><br><sub>Text editing — fonts, color, size</sub></td>
-    <td align="center"><img src="docs/assets/reference/Sleek%20Sneaker%20Background%20Remover.png" width="210" alt="Background removal"><br><sub>Background removal</sub></td>
-  </tr>
-  <tr>
-    <td align="center"><img src="docs/assets/reference/Travel%20Vlog%20Music%20Picker.png" width="210" alt="Music picker"><br><sub>Music picker</sub></td>
-    <td align="center"><img src="docs/assets/reference/Brand%20Auto-Fill%20Mobile%20UI.png" width="210" alt="Brand auto-fill"><br><sub>Brand auto-fill</sub></td>
-  </tr>
-  <tr>
-    <td align="center"><img src="docs/assets/reference/Dark%20Templates%20Gallery%20UI.png" width="210" alt="Templates"><br><sub>Templates</sub></td>
-    <td align="center"><img src="docs/assets/reference/Dark%20Export%20Project%20Dialog.png" width="210" alt="Export"><br><sub>Export — PNG / JPG / MP4</sub></td>
+    <td align="center"><img src="docs/assets/reference/Brand%20Auto-Fill%20Mobile%20UI.png" width="190" alt="Brand auto-fill"><br><sub>Brand auto-fill</sub></td>
+    <td align="center"><img src="docs/assets/reference/Dark%20Templates%20Gallery%20UI.png" width="190" alt="Templates"><br><sub>Templates</sub></td>
+    <td align="center"><img src="docs/assets/reference/Dark%20Export%20Project%20Dialog.png" width="190" alt="Export"><br><sub>Export</sub></td>
   </tr>
 </table>
 
