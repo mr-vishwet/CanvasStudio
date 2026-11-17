@@ -1,293 +1,390 @@
 #!/usr/bin/env python3
-"""Generate canvas_studio README images using PIL."""
+"""Generate canvas_studio README images using PIL.
 
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+Procedural dark-theme mockups: gradients, device frames, drop shadows and
+drawn icons — no external services, no sign-ups, fully reproducible.
+Outputs replace the eight screenshots in place (old versions stay in git).
+"""
 
-# Colors matching the example app theme
-PURPLE = (103, 80, 164)      # #6750A4
-DARK_PURPLE = (78, 58, 130)
-DARK_BG = (18, 18, 30)       # #12121e
-CANVAS_BG = (26, 26, 46)     # #1A1A2E
+from PIL import Image, ImageDraw, ImageFont, ImageFilter
+
+# --- palette (matches the Flutter theme) ---
+BG = (18, 18, 30)        # #12121e
+CANVAS = (26, 26, 46)    # #1A1A2E
+PANEL = (37, 37, 64)     # #252540
+BORDER = (58, 58, 92)    # #3A3A5C
+PURPLE = (103, 80, 164)  # #6750A4
+PURPLE_D = (78, 58, 130)
+AMBER = (255, 193, 7)    # #FFC107
+TEAL = (3, 169, 144)     # #03A990
+GREEN = (76, 175, 80)    # #4CAF50
+PINK = (233, 30, 99)     # #E91E63
 WHITE = (255, 255, 255)
-LIGHT_GRAY = (176, 190, 197) # #B0BEC5
-AMBER = (255, 193, 7)
-PINK = (233, 30, 99)
-TEAL = (3, 169, 144)
-GREEN = (76, 175, 80)
+MUTED = (176, 190, 197)  # #B0BEC5
 
-def get_font(size, bold=True):
-    """Try to load a decent font, fallback to default."""
-    font_paths = [
-        "/c/Windows/Fonts/arialbd.ttf" if bold else "/c/Windows/Fonts/arial.ttf",
-        "/c/Windows/Fonts/segoeuib.ttf" if bold else "/c/Windows/Fonts/segoeui.ttf",
-        "/c/Windows/Fonts/calibrib.ttf" if bold else "/c/Windows/Fonts/calibri.ttf",
-    ]
-    for path in font_paths:
+FONTS_B = [
+    "/c/Windows/Fonts/segoeuib.ttf",
+    "/c/Windows/Fonts/arialbd.ttf",
+    "/c/Windows/Fonts/calibrib.ttf",
+    "/c/Windows/Fonts/verdanab.ttf",
+]
+FONTS_R = [
+    "/c/Windows/Fonts/segoeui.ttf",
+    "/c/Windows/Fonts/arial.ttf",
+    "/c/Windows/Fonts/calibri.ttf",
+    "/c/Windows/Fonts/verdana.ttf",
+]
+
+def font(size, bold=True):
+    for path in FONTS_B if bold else FONTS_R:
         try:
             return ImageFont.truetype(path, size)
-        except Exception:
+        except OSError:
             continue
     return ImageFont.load_default()
 
 
-def draw_rounded_rect(draw, xy, radius, fill, outline=None, outline_width=0):
+def linear_gradient(size, c1, c2, vertical=True):
+    w, h = size
+    base = Image.new("RGB", size, c1)
+    top = Image.new("RGB", size, c2)
+    n = (h if vertical else w) - 1
+    ramp = Image.new("L", (1, n + 1))
+    p = ramp.load()
+    for i in range(n + 1):
+        p[0, i] = int(255 * i / n)
+    ramp = ramp.resize(size)
+    return Image.composite(top, base, ramp)
+
+
+def rounded_rect(img, xy, radius, fill, outline=None, outline_width=0):
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle(xy, radius=radius, fill=fill, outline=outline, width=outline_width)
+
+
+def shadow(img, xy, radius, offset=(0, 10), blur=22, alpha=100):
+    """Soft drop shadow beneath the shape at xy, composited onto img."""
     x1, y1, x2, y2 = xy
-    draw.rounded_rectangle([x1, y1, x2, y2], radius=radius, fill=fill, outline=outline, width=outline_width)
+    pad = blur
+    dy = max(offset[1], 0)
+    layer = Image.new("RGBA", (x2 - x1 + pad * 2, y2 - y1 + pad * 2 + dy), (0, 0, 0, 0))
+    sd = ImageDraw.Draw(layer)
+    sd.rounded_rectangle([pad, pad + dy, pad + (x2 - x1), pad + dy + (y2 - y1)],
+                         radius=radius, fill=(0, 0, 0, alpha))
+    layer = layer.filter(ImageFilter.GaussianBlur(blur))
+    img.alpha_composite(layer, (x1 - pad, y1 - pad))
+
+
+def check(d, x, y, s, fill):
+    """Small drawn check mark (avoids glyphs missing from system fonts)."""
+    d.line([(x, y + s * 0.35), (x + s * 0.35, y + s * 0.9), (x + s * 0.95, y - s * 0.3)],
+           fill=fill, width=3)
+
+
+def arrow(d, x, y, color, size=22):
+    d.line([(x, y), (x, y + size)], fill=color, width=4)
+    d.polygon([(x - 7, y + size - 11), (x + 7, y + size - 11), (x, y + size)], fill=color)
+
+
+def star(d, cx, cy, r, fill):
+    d.polygon([(cx, cy - r), (cx + r * 0.55, cy), (cx, cy + r), (cx - r * 0.55, cy)], fill=fill)
+
+
+def icon(d, cx, cy, r, fill, kind):
+    d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=fill)
+    d.ellipse([cx - r + 5, cy - r + 5, cx + r - 5, cy + r - 5], fill=BG)
+    if kind == "t":  # text
+        d.rectangle([cx - 6, cy - 9, cx + 6, cy - 1], fill=fill)
+        d.rectangle([cx - 9, cy + 3, cx + 2, cy + 7], fill=fill)
+    elif kind == "i":  # image
+        d.rectangle([cx - 7, cy - 7, cx + 7, cy + 7], fill=fill, width=2)
+        d.ellipse([cx + 1, cy - 4, cx + 5, cy], fill=fill)
+    elif kind == "s":  # shape
+        d.rectangle([cx - 6, cy - 6, cx + 6, cy + 6], fill=fill)
+    elif kind == "p":  # sticker badge
+        star(d, cx, cy, r * 0.55, fill)
+    elif kind == "b":  # paint brush
+        d.line([(cx - 5, cy - 5), (cx + 5, cy + 5)], fill=fill, width=3)
+    elif kind == "n":  # audio note
+        d.ellipse([cx - 4, cy - 8, cx + 4, cy], fill=fill)
+        d.line([(cx, cy - 8), (cx, cy + 6)], fill=fill, width=3)
+    elif kind == "v":  # video
+        d.polygon([(cx - 5, cy - 5), (cx + 3, cy), (cx - 5, cy + 5)], fill=fill)
+    elif kind == "g":  # remove background
+        d.rectangle([cx - 6, cy - 6, cx + 6, cy + 6], fill=fill, width=2)
+        d.line([cx - 5, cy - 2, cx + 5, cy + 2], fill=fill, width=2)
+
+
+def save(img, path):
+    img.convert("RGB").save(path, "PNG")
+    print("Saved", path)
 
 
 def generate_hero_canvas():
-    """Main hero image showing the canvas editor UI."""
     W, H = 1200, 800
-    img = Image.new("RGB", (W, H), DARK_BG)
-    d = ImageDraw.Draw(img)
+    img = Image.new("RGBA", (W, H), BG + (255,))
+    base = linear_gradient((W, H), BG, (30, 30, 54))
+    shadows = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    content = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    cd = ImageDraw.Draw(content)
 
     # Top bar
-    draw_rounded_rect(d, (0, 0, W, 64), 0, DARK_PURPLE)
-    d.text((24, 16), "Canvas Studio", font=get_font(24, bold=True), fill=WHITE)
-    d.text((W - 200, 18), "Undo   Redo   Brand Fill   Export", font=get_font(16), fill=LIGHT_GRAY)
+    rounded_rect(content, (0, 0, W, 64), 0, PANEL)
+    cd.text((28, 19), "Canvas Studio", font=font(26, True), fill=WHITE, anchor="lm")
+    cd.text((W - 28, 20), "Undo   Redo   Brand Fill   Export", font=font(17), fill=MUTED, anchor="rm")
 
-    # Canvas area
-    cx, cy = 100, 100
-    cw, ch = 1000, 560
-    draw_rounded_rect(d, (cx, cy, cx + cw, cy + ch), 16, CANVAS_BG)
+    # Device frame around canvas
+    fx, fy, fw, fh = 60, 96, 1080, 560
+    shadow(shadows, (fx - 8, fy - 8, fx + fw + 8, fy + fh + 8), 20, offset=(0, 16), blur=28, alpha=120)
+    rounded_rect(content, (fx, fy, fx + fw, fy + fh), 22, PANEL, outline=BORDER, outline_width=1)
 
-    # Checkerboard pattern behind canvas
-    tile = 40
-    for ty in range(cy, cy + ch, tile):
-        for tx in range(cx, cx + cw, tile):
+    # Screen
+    sx, sy, sw, sh = fx + 30, fy + 30, fw - 60, fh - 60
+    rounded_rect(content, (sx, sy, sx + sw, sy + sh), 16, CANVAS)
+
+    # Checkerboard behind canvas
+    tile = 36
+    for ty in range(sy, sy + sh, tile):
+        for tx in range(sx, sx + sw, tile):
             if ((tx // tile + ty // tile) % 2) == 0:
-                d.rectangle([tx, ty, min(tx + tile, cx + cw), min(ty + tile, cy + ch)], fill=(34, 34, 54))
+                cd.rectangle([tx, ty, min(tx + tile, sx + sw), min(ty + tile, sy + sh)], fill=(34, 34, 54))
 
-    # Background shape layer
-    draw_rounded_rect(d, (cx + 20, cy + 20, cx + cw - 20, cy + ch - 20), 12, DARK_PURPLE)
+    # Layers
+    rounded_rect(content, (sx + 28, sy + 28, sx + sw - 28, sy + sh - 28), 12, PURPLE_D)
+    cd.rectangle([sx + 420, sy + 270, sx + 620, sy + 286], fill=PURPLE)
+    cd.rounded_rectangle([sx + 340, sy + 310, sx + 700, sy + 360], 10, BG)
 
-    # Accent shape
-    d.rectangle([cx + 440, cy + 300, cx + 640, cy + 314], fill=PURPLE)
+    # Title layers
+    cd.text((sx + 80, sy + 372), "Happy", font=font(60, True), fill=WHITE)
+    cd.text((sx + 80, sy + 444), "Diwali", font=font(60, True), fill=AMBER)
+    cd.text((sx + 80, sy + 516), "Flutter SDK for design creation", font=font(22), fill=MUTED)
 
-    # Title text layer
-    d.text((cx + 80, cy + 400), "Happy", font=get_font(64, bold=True), fill=WHITE)
-    d.text((cx + 80, cy + 470), "Diwali", font=get_font(64, bold=True), fill=AMBER)
+    # Selection handles
+    cd.rectangle([sx + 72, sy + 368, sx + 78, sy + 376], fill=AMBER)
+    cd.rectangle([sx + sw - 82, sy + 512, sx + sw - 76, sy + 520], fill=AMBER)
 
-    # Subtitle
-    d.text((cx + 80, cy + 540), "Flutter SDK for design creation", font=get_font(24), fill=LIGHT_GRAY)
-
-    # Sticker layer (small circle)
-    d.ellipse([cx + 850, cy + 420, cx + 930, cy + 500], fill=PINK, outline=WHITE, width=3)
-    d.text((cx + 870, cy + 450), "✨", font=get_font(40), fill=WHITE)
-
-    # Selection handles on title layer
-    d.rectangle([cx + 76, cy + 396, cx + 80, cy + 404], fill=AMBER)
-    d.rectangle([cx + 996, cy + 536, cx + 1000, cy + 544], fill=AMBER)
+    # Sticker badge
+    cd.ellipse([sx + 850, sy + 380, sx + 940, sy + 470], fill=PINK, outline=WHITE, width=3)
+    star(cd, sx + 895, sy + 425, 16, WHITE)
 
     # Bottom toolbar
     ty = 700
-    draw_rounded_rect(d, (0, ty, W, H), 0, DARK_PURPLE)
-    tools = [
-        ("📝", "Text"), ("🖼️", "Image"), ("🔲", "Shape"), ("✨", "Sticker"),
-        ("🖌️", "Paint"), ("🎵", "Audio"), ("🎬", "Video"), ("🧹", "Remove BG"),
-    ]
-    tx = 24
-    for icon, label in tools:
-        d.text((tx, ty + 14), icon, font=get_font(28))
-        d.text((tx + 40, ty + 20), label, font=get_font(14), fill=LIGHT_GRAY)
-        tx += 110
+    rounded_rect(content, (0, ty, W, H), 0, PANEL)
+    tools = [("Text", "t"), ("Image", "i"), ("Shape", "s"), ("Sticker", "p"),
+             ("Paint", "b"), ("Audio", "n"), ("Video", "v"), ("Remove BG", "g")]
+    tx = 28
+    for label, kind in tools:
+        icon(cd, tx + 22, ty + 30, 14, PURPLE, kind)
+        cd.text((tx + 48, ty + 23), label, font=font(14), fill=MUTED, anchor="lm")
+        tx += 115
+    rounded_rect(content, (W - 230, ty + 12, W - 32, ty + 48), 8, AMBER)
+    cd.text((W - 200, ty + 30), "Export MP4", font=font(16, True), fill=(26, 26, 42), anchor="mm")
 
-    # Export button
-    draw_rounded_rect(d, (W - 220, ty + 10, W - 30, ty + 44), 8, AMBER)
-    d.text((W - 190, ty + 18), "Export MP4", font=get_font(16, bold=True), fill=DARK_BG)
+    img = Image.alpha_composite(base.convert("RGBA"), shadows)
+    img = Image.alpha_composite(img, content)
+    save(img, "example/assets/screenshots/hero-canvas.png")
 
-    img.save("example/assets/screenshots/hero-canvas.png")
-    print("Saved hero-canvas.png")
+
+def feature_shell(W, H, title, subtitle):
+    img = Image.new("RGBA", (W, H), BG + (255,))
+    base = linear_gradient((W, H), BG, (26, 26, 44))
+    shadows = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    content = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    cd = ImageDraw.Draw(content)
+    cd.text((28, 24), title, font=font(24, True), fill=WHITE, anchor="lm")
+    cd.text((28, 58), subtitle, font=font(16), fill=MUTED, anchor="lm")
+    return img, base, shadows, content, cd
+
+
+def finish(img, base, shadows, content, path):
+    img = Image.alpha_composite(base.convert("RGBA"), shadows)
+    img = Image.alpha_composite(img, content)
+    save(img, path)
 
 
 def generate_feature_text():
-    """Text editing feature image."""
     W, H = 600, 400
-    img = Image.new("RGB", (W, H), DARK_BG)
-    d = ImageDraw.Draw(img)
-
-    d.text((24, 24), "Text Editing with Indic Support", font=get_font(24, bold=True), fill=WHITE)
-    d.text((24, 60), "Devanagari • Bengali • Tamil • Telugu • Gujarati", font=get_font(16), fill=LIGHT_GRAY)
-
-    # Text layer preview
-    draw_rounded_rect(d, (24, 100, 576, 320), 16, CANVAS_BG)
-    d.text((60, 140), "नमस्ते", font=get_font(48, bold=True), fill=WHITE)
-    d.text((60, 200), "নমস্কার", font=get_font(48, bold=True), fill=AMBER)
-    d.text((60, 260), "வணக்கம்", font=get_font(48, bold=True), fill=TEAL)
-
-    # Toolbar
-    draw_rounded_rect(d, (24, 330, 576, 370), 8, DARK_PURPLE)
-    d.text((40, 342), "🅰 Font: Noto Sans Devanagari   🎨 Color: #FFFFFF   📏 Size: 48", font=get_font(16), fill=LIGHT_GRAY)
-
-    img.save("example/assets/screenshots/feature-text.png")
-    print("Saved feature-text.png")
+    img, base, shadows, content, d = feature_shell(W, H, "Text Editing with Indic Support",
+                                                   "Devanagari • Bengali • Tamil • Telugu • Gujarati")
+    shadow(shadows, (28, 108, 572, 328), 16, offset=(0, 10), blur=20, alpha=100)
+    rounded_rect(content, (28, 108, 572, 328), 16, CANVAS)
+    cd = ImageDraw.Draw(content)
+    samples = [("DEVANAGARI", WHITE), ("BENGALI", AMBER), ("TAMIL", TEAL)]
+    for i, (name, color) in enumerate(samples):
+        cd.text((72, 150 + i * 46), name, font=font(34, True), fill=color)
+    shadow(shadows, (28, 342, 572, 382), 8, offset=(0, 6), blur=12, alpha=90)
+    rounded_rect(content, (28, 342, 572, 382), 8, PANEL)
+    cd.text((46, 362), "A   Font: Noto Sans Indic      B   Color: #FFFFFF      C   Size: 48",
+            font=font(15), fill=MUTED)
+    finish(img, base, shadows, content, "example/assets/screenshots/feature-text.png")
 
 
 def generate_feature_image():
-    """Image editing feature image."""
     W, H = 600, 400
-    img = Image.new("RGB", (W, H), DARK_BG)
-    d = ImageDraw.Draw(img)
-
-    d.text((24, 24), "Image Editing + BG Removal", font=get_font(24, bold=True), fill=WHITE)
-    d.text((24, 60), "On-device ONNX U2Net — no API cost", font=get_font(16), fill=LIGHT_GRAY)
-
-    # Image layer preview
-    draw_rounded_rect(d, (24, 100, 576, 280), 16, CANVAS_BG)
-    # Product image mockup
-    d.rectangle([60, 120, 260, 260], fill=(70, 70, 90))
-    d.text((100, 180), "Product", font=get_font(20), fill=LIGHT_GRAY)
-    d.text((100, 210), "Image", font=get_font(20), fill=LIGHT_GRAY)
-
-    # Effects panel
+    img, base, shadows, content, d = feature_shell(W, H, "Image Editing + BG Removal",
+                                                   "On-device ONNX U2Net — no API cost")
+    shadow(shadows, (28, 108, 572, 298), 16, offset=(0, 10), blur=20, alpha=100)
+    rounded_rect(content, (28, 108, 572, 298), 16, CANVAS)
+    cd = ImageDraw.Draw(content)
+    cd.rectangle([64, 128, 284, 278], fill=(46, 46, 70), outline=BORDER, width=1)
+    cd.text((144, 194), "Product", font=font(20, True), fill=MUTED)
+    cd.text((144, 222), "Image", font=font(20, True), fill=MUTED)
     effects = [("Brightness", 0.6), ("Contrast", 0.3), ("Saturation", 0.1), ("Blur", 2.0)]
-    ey = 310
+    ey = 320
     for label, val in effects:
-        d.text((40, ey), label, font=get_font(14), fill=LIGHT_GRAY)
-        d.rectangle([120, ey, 300, ey + 10], fill=(60, 60, 80))
-        d.rectangle([120, ey, 120 + int(val * 60), ey + 10], fill=PURPLE)
-        ey += 30
-
-    # BG removal badge
-    draw_rounded_rect(d, (400, 310, 576, 360), 8, TEAL)
-    d.text((416, 326), "✓ BG Removed", font=get_font(16, bold=True), fill=WHITE)
-    d.text((416, 346), "On-device", font=get_font(12), fill=LIGHT_GRAY)
-
-    img.save("example/assets/screenshots/feature-image.png")
-    print("Saved feature-image.png")
+        cd.text((46, ey), label, font=font(14), fill=MUTED)
+        cd.rectangle([132, ey + 4, 308, ey + 12], fill=(46, 46, 70))
+        cd.rectangle([132, ey + 4, 132 + int(val * 78), ey + 12], fill=PURPLE)
+        ey += 26
+    shadow(shadows, (320, 318, 572, 378), 8, offset=(0, 6), blur=12, alpha=90)
+    rounded_rect(content, (320, 318, 572, 378), 8, TEAL)
+    cd.text((336, 332), "BG Removed", font=font(16, True), fill=WHITE)
+    check(cd, 326, 332, 20, WHITE)
+    cd.text((336, 354), "On-device", font=font(12), fill=MUTED)
+    finish(img, base, shadows, content, "example/assets/screenshots/feature-image.png")
 
 
 def generate_feature_video():
-    """Video export feature image."""
     W, H = 600, 400
-    img = Image.new("RGB", (W, H), DARK_BG)
-    d = ImageDraw.Draw(img)
-
-    d.text((24, 24), "Image + Audio → MP4", font=get_font(24, bold=True), fill=WHITE)
-    d.text((24, 60), "On-device FFmpeg — no backend needed", font=get_font(16), fill=LIGHT_GRAY)
-
-    # Video timeline
-    draw_rounded_rect(d, (24, 100, 576, 220), 16, CANVAS_BG)
-    d.rectangle([60, 130, 540, 190], fill=(70, 70, 90))
-    d.text((80, 150), "📹 Video Track", font=get_font(16), fill=LIGHT_GRAY)
-    d.rectangle([60, 200, 540, 220], fill=(70, 70, 90))
-    d.text((80, 210), "🎵 Audio Track", font=get_font(16), fill=LIGHT_GRAY)
-
-    # Trim handles
-    d.rectangle([60, 126, 80, 194], fill=AMBER)
-    d.rectangle([520, 126, 540, 194], fill=AMBER)
-
-    # Export settings
-    draw_rounded_rect(d, (24, 250, 576, 330), 16, DARK_PURPLE)
-    d.text((40, 266), "Export Settings:", font=get_font(16, bold=True), fill=WHITE)
-    settings = ["Format: MP4 (H.264)", "Resolution: 1080×1080", "Watermark: Enabled", "Watermark: Enabled"]
+    img, base, shadows, content, d = feature_shell(W, H, "Image + Audio → MP4",
+                                                   "On-device FFmpeg — no backend needed")
+    shadow(shadows, (28, 108, 572, 230), 16, offset=(0, 10), blur=20, alpha=100)
+    rounded_rect(content, (28, 108, 572, 230), 16, CANVAS)
+    cd = ImageDraw.Draw(content)
+    cd.rectangle([64, 140, 536, 190], fill=(46, 46, 70))
+    cd.text((88, 156), "Video Track", font=font(16), fill=MUTED)
+    cd.rectangle([64, 200, 536, 220], fill=(46, 46, 70))
+    cd.text((88, 208), "Audio Track", font=font(16), fill=MUTED)
+    cd.rectangle([60, 134, 80, 196], fill=AMBER)
+    cd.rectangle([520, 134, 540, 196], fill=AMBER)
+    shadow(shadows, (28, 254, 572, 334), 16, offset=(0, 8), blur=18, alpha=90)
+    rounded_rect(content, (28, 254, 572, 334), 16, PANEL)
+    cd.text((46, 270), "Export Settings:", font=font(16, True), fill=WHITE)
+    settings = ["Format: MP4 (H.264)", "Resolution: 1080×1080", "Watermark: Enabled"]
     for i, s in enumerate(settings):
-        d.text((60, 290 + i * 22), f"✓ {s}", font=get_font(14), fill=LIGHT_GRAY)
-
-    # Result badge
-    draw_rounded_rect(d, (24, 340, 576, 380), 8, GREEN)
-    d.text((40, 354), "✓ Export complete — saved to gallery", font=get_font(16, bold=True), fill=WHITE)
-
-    img.save("example/assets/screenshots/feature-video.png")
-    print("Saved feature-video.png")
+        cd.text((64, 294 + i * 22), s, font=font(14), fill=MUTED)
+        check(cd, 44, 294 + i * 22, 16, PURPLE)
+    shadow(shadows, (28, 346, 572, 386), 8, offset=(0, 4), blur=10, alpha=90)
+    rounded_rect(content, (28, 346, 572, 386), 8, GREEN)
+    cd.text((46, 366), "Export complete — saved to gallery", font=font(16, True), fill=WHITE)
+    check(cd, 34, 366, 20, WHITE)
+    finish(img, base, shadows, content, "example/assets/screenshots/feature-video.png")
 
 
 def generate_architecture():
-    """Architecture diagram image."""
     W, H = 1000, 700
-    img = Image.new("RGB", (W, H), DARK_BG)
-    d = ImageDraw.Draw(img)
+    img, base, shadows, content, cd = feature_shell(W, H, "canvas_studio SDK Architecture", "")
 
-    d.text((40, 30), "canvas_studio SDK Architecture", font=get_font(28, bold=True), fill=WHITE)
+    def box(x, y, w, h, color, title, lines):
+        shadow(shadows, (x, y, x + w, y + h), 12, offset=(0, 8), blur=16, alpha=100)
+        rounded_rect(content, (x, y, x + w, y + h), 12, color, outline=WHITE, outline_width=1)
+        cd.text((x + 30, y + 18), title, font=font(20, True), fill=WHITE)
+        for i, line in enumerate(lines):
+            cd.text((x + 20, y + 48 + i * 14), line, font=font(12), fill=MUTED)
 
-    # Host App
-    draw_rounded_rect(d, (40, 80, 300, 180), 12, PURPLE, outline=WHITE, outline_width=2)
-    d.text((70, 100), "Host App", font=get_font(20, bold=True), fill=WHITE)
-    d.text((60, 130), "Flutter Application", font=get_font(14), fill=LIGHT_GRAY)
-    d.text((60, 150), "• TemplateProvider", font=get_font(12), fill=LIGHT_GRAY)
-    d.text((60, 162), "• AudioProvider", font=get_font(12), fill=LIGHT_GRAY)
-    d.text((60, 174), "• StickerProvider", font=get_font(12), fill=LIGHT_GRAY)
+    box(40, 80, 260, 110, PURPLE, "Host App", ["Flutter Application", "• TemplateProvider",
+                                               "• AudioProvider", "• StickerProvider"])
+    box(340, 80, 320, 110, PURPLE, "CanvasEditorWidget", ["Theme • Icons • Fonts • Toolbar"])
+    box(700, 80, 260, 110, PURPLE, "CanvasController", ["State • History • Selection"])
+    arrow(cd, 162, 200, AMBER)
+    arrow(cd, 492, 200, AMBER)
+    arrow(cd, 822, 200, AMBER)
+    box(40, 230, 260, 100, TEAL, "CustomPainter Canvas", ["TextLayer • ImageLayer",
+                                                         "ShapeLayer • StickerLayer", "PaintLayer"])
+    box(340, 230, 320, 100, TEAL, "Feature Modules",
+        ["Text Edit", "Image Edit", "Audio", "Video", "Effects", "BG Removal", "Brand Auto-Fill", "Animation"])
+    box(700, 230, 260, 100, TEAL, "Export Pipeline", ["PNG/JPG → MP4 via FFmpeg",
+                                                    "On-device rendering"])
+    arrow(cd, 162, 340, AMBER)
+    arrow(cd, 492, 340, AMBER)
+    arrow(cd, 822, 340, AMBER)
+    shadow(shadows, (340, 370, 660, 450), 12, offset=(0, 8), blur=16, alpha=100)
+    rounded_rect(content, (340, 370, 660, 450), 12, GREEN, outline=WHITE, outline_width=1)
+    cd.text((374, 392), "Output", font=font(20, True), fill=WHITE)
+    cd.text((362, 422), "PNG • JPG • MP4", font=font(16, True), fill=WHITE)
+    cd.text((362, 440), "Saved to device gallery", font=font(12), fill=MUTED)
+    finish(img, base, shadows, content, "docs/assets/architecture.png")
 
-    # CanvasEditorWidget
-    draw_rounded_rect(d, (340, 80, 660, 180), 12, PURPLE, outline=WHITE, outline_width=2)
-    d.text((370, 100), "CanvasEditorWidget", font=get_font(20, bold=True), fill=WHITE)
-    d.text((360, 130), "Theme • Icons • Fonts • Toolbar", font=get_font(12), fill=LIGHT_GRAY)
 
-    # CanvasController
-    draw_rounded_rect(d, (700, 80, 960, 180), 12, PURPLE, outline=WHITE, outline_width=2)
-    d.text((730, 100), "CanvasController", font=get_font(20, bold=True), fill=WHITE)
-    d.text((720, 130), "State • History • Selection", font=get_font(12), fill=LIGHT_GRAY)
+def generate_feature_brand():
+    W, H = 600, 400
+    img, base, shadows, content, d = feature_shell(W, H, "Brand Auto-Fill",
+                                                   "Placeholder matching + logo injection")
+    shadow(shadows, (28, 108, 308, 350), 16, offset=(0, 10), blur=20, alpha=100)
+    rounded_rect(content, (28, 108, 308, 350), 16, PANEL)
+    cd = ImageDraw.Draw(content)
+    fields = [("Business Name", "Sharma Electronics"), ("Phone", "+91 98765 43210"),
+              ("Address", "Mumbai, India"), ("Tagline", "Quality Since 1990")]
+    for i, (label, value) in enumerate(fields):
+        rect_y = 140 + i * 60
+        cd.text((54, rect_y - 20), label, font=font(13), fill=MUTED)
+        rounded_rect(content, (54, rect_y, 282, rect_y + 30), 8, CANVAS)
+        cd.text((62, rect_y + 15), value, font=font(13), fill=WHITE, anchor="lm")
+    rounded_rect(content, (104, 366, 232, 386), 8, AMBER)
+    cd.text((168, 376), "Apply to Canvas", font=font(14, True), fill=(26, 26, 42), anchor="mm")
+    shadow(shadows, (340, 108, 572, 388), 16, offset=(0, 10), blur=20, alpha=100)
+    rounded_rect(content, (340, 108, 572, 388), 16, CANVAS)
+    cd.text((372, 132), "Sharma Electronics", font=font(24, True), fill=WHITE)
+    cd.text((372, 172), "+91 98765 43210", font=font(17), fill=MUTED)
+    cd.text((372, 202), "Mumbai, India", font=font(17), fill=MUTED)
+    cd.text((372, 232), "Quality Since 1990", font=font(17), fill=MUTED)
+    rounded_rect(content, (404, 260, 484, 340), 8, PURPLE)
+    cd.text((444, 300), "LOGO", font=font(16, True), fill=WHITE, anchor="mm")
+    finish(img, base, shadows, content, "example/assets/screenshots/feature-brand.png")
 
-    # Arrows down
-    d.text((160, 190), "↓", font=get_font(24), fill=AMBER)
-    d.text((490, 190), "↓", font=get_font(24), fill=AMBER)
-    d.text((820, 190), "↓", font=get_font(24), fill=AMBER)
 
-    # Canvas Layer
-    draw_rounded_rect(d, (40, 220, 300, 320), 12, TEAL, outline=WHITE, outline_width=2)
-    d.text((70, 240), "CustomPainter Canvas", font=get_font(20, bold=True), fill=WHITE)
-    d.text((60, 270), "TextLayer • ImageLayer", font=get_font(12), fill=LIGHT_GRAY)
-    d.text((60, 282), "ShapeLayer • StickerLayer", font=get_font(12), fill=LIGHT_GRAY)
-    d.text((60, 294), "PaintLayer", font=get_font(12), fill=LIGHT_GRAY)
-
-    # Modules Layer
-    draw_rounded_rect(d, (340, 220, 660, 320), 12, TEAL, outline=WHITE, outline_width=2)
-    d.text((370, 240), "Feature Modules", font=get_font(20, bold=True), fill=WHITE)
-    modules = ["Text Edit", "Image Edit", "Audio", "Video", "Effects", "BG Removal", "Brand Auto-Fill", "Animation"]
-    mx, my = 360, 270
-    for i, m in enumerate(modules):
-        col = i % 4
-        row = i // 4
-        d.text((mx + col * 130, my + row * 16), f"• {m}", font=get_font(12), fill=LIGHT_GRAY)
-
-    # Export Layer
-    draw_rounded_rect(d, (700, 220, 960, 320), 12, TEAL, outline=WHITE, outline_width=2)
-    d.text((730, 240), "Export Pipeline", font=get_font(20, bold=True), fill=WHITE)
-    d.text((720, 270), "PNG/JPG → MP4 via FFmpeg", font=get_font(12), fill=LIGHT_GRAY)
-    d.text((720, 282), "On-device rendering", font=get_font(12), fill=LIGHT_GRAY)
-
-    # Arrows to bottom
-    d.text((160, 330), "↓", font=get_font(24), fill=AMBER)
-    d.text((490, 330), "↓", font=get_font(24), fill=AMBER)
-    d.text((820, 330), "↓", font=get_font(24), fill=AMBER)
-
-    # Output Layer
-    draw_rounded_rect(d, (340, 360, 660, 440), 12, GREEN, outline=WHITE, outline_width=2)
-    d.text((370, 380), "Output", font=get_font(20, bold=True), fill=WHITE)
-    d.text((360, 410), "PNG • JPG • MP4", font=get_font(16), fill=WHITE)
-    d.text((360, 430), "Saved to device gallery", font=get_font(12), fill=LIGHT_GRAY)
-
-    img.save("docs/assets/architecture.png")
-    print("Saved docs/assets/architecture.png")
+def generate_feature_templates():
+    W, H = 600, 400
+    img, base, shadows, content, cd = feature_shell(W, H, "Template Picker",
+                                                   "6 starter templates · Category filters")
+    tabs = ["All", "Blank", "Business", "Sale", "Festival", "Video"]
+    tx = 28
+    for tab in tabs:
+        rounded_rect(content, (tx, 108, tx + 94, 140), 8, CANVAS)
+        cd.text((tx + 47, 124), tab, font=font(12, True), fill=MUTED, anchor="mm")
+        tx += 104
+    templates = [("Blank Square", "1080×1080", PURPLE), ("Blank Portrait", "1080×1920", TEAL),
+                 ("Business Card", "1080×608", AMBER), ("Sale Poster", "1080×1920", PINK),
+                 ("Festival Post", "1080×1080", AMBER), ("Video Slideshow", "1080×1080", TEAL)]
+    ty = 166
+    for i, (name, size, color) in enumerate(templates):
+        col = i % 2
+        row = i // 2
+        x = 28 + col * 286
+        y = ty + row * 112
+        rounded_rect(content, (x, y, x + 270, y + 96), 12, CANVAS)
+        cd.rectangle([x + 22, y + 22, x + 102, y + 74], fill=color)
+        cd.text((x + 124, y + 30), name, font=font(14, True), fill=WHITE)
+        cd.text((x + 124, y + 56), size, font=font(12), fill=MUTED)
+    finish(img, base, shadows, content, "example/assets/screenshots/feature-templates.png")
 
 
 def generate_platform_support():
-    """Platform support image."""
     W, H = 800, 400
-    img = Image.new("RGB", (W, H), DARK_BG)
-    d = ImageDraw.Draw(img)
-
-    d.text((40, 30), "Platform Support", font=get_font(24, bold=True), fill=WHITE)
-
-    platforms = [
-        ("Android", "API 21+", PURPLE),
-        ("iOS", "13+", TEAL),
-        ("Web", "Chrome", AMBER),
-        ("Windows", "10/11", PINK),
-        ("macOS", "10.14+", GREEN),
-        ("Linux", "Ubuntu", LIGHT_GRAY),
-    ]
-
-    y = 100
+    img, base, shadows, content, cd = feature_shell(W, H, "Platform Support", "")
+    platforms = [("Android", "API 21+", PURPLE), ("iOS", "13+", TEAL), ("Web", "Chrome", AMBER),
+                 ("Windows", "10/11", PINK), ("macOS", "10.14+", GREEN), ("Linux", "Ubuntu", MUTED)]
+    y = 104
     for name, ver, color in platforms:
-        draw_rounded_rect(d, (40, y, 760, y + 50), 10, DARK_PURPLE)
-        d.text((70, y + 12), name, font=get_font(20, bold=True), fill=WHITE)
-        d.text((700, y + 16), ver, font=get_font(16), fill=LIGHT_GRAY)
-        d.ellipse([50, y + 15, 70, y + 35], fill=color)
-        y += 60
+        shadow(shadows, (40, y, 760, y + 52), 10, offset=(0, 6), blur=14, alpha=90)
+        rounded_rect(content, (40, y, 760, y + 52), 10, PANEL)
+        cd.text((72, y + 26), name, font=font(20, True), fill=WHITE, anchor="lm")
+        cd.text((758, y + 26), ver, font=font(16), fill=MUTED, anchor="rm")
+        cd.ellipse([54, y + 16, 74, y + 36], fill=color)
+        y += 64
+    finish(img, base, shadows, content, "docs/assets/platform-support.png")
 
-    img.save("docs/assets/platform-support.png")
-    print("Saved docs/assets/platform-support.png")
+
+EXPECTED = {
+    "example/assets/screenshots/hero-canvas.png": (1200, 800),
+    "example/assets/screenshots/feature-text.png": (600, 400),
+    "example/assets/screenshots/feature-image.png": (600, 400),
+    "example/assets/screenshots/feature-video.png": (600, 400),
+    "example/assets/screenshots/feature-brand.png": (600, 400),
+    "example/assets/screenshots/feature-templates.png": (600, 400),
+    "docs/assets/architecture.png": (1000, 700),
+    "docs/assets/platform-support.png": (800, 400),
+}
 
 
 if __name__ == "__main__":
@@ -295,6 +392,15 @@ if __name__ == "__main__":
     generate_feature_text()
     generate_feature_image()
     generate_feature_video()
+    generate_feature_brand()
+    generate_feature_templates()
     generate_architecture()
     generate_platform_support()
-    print("All images generated!")
+    from PIL import Image as _I
+    ok = True
+    for path, size in EXPECTED.items():
+        with _I.open(path) as im:
+            good = im.size == size
+            ok &= good
+            print(f"{'OK ' if good else 'FAIL'} {path} {im.size}")
+    print("All images generated!" if ok else "SOME IMAGES FAILED")
