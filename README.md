@@ -124,21 +124,6 @@ Host App
 
 ---
 
-## 🔌 Plugin System (Ponytail)
-
-canvas_studio integrates with the **Ponytail** engineering plugin ecosystem for autonomous development workflows:
-
-| Plugin | Purpose |
-|--------|---------|
-| `ponytail` | Engineering standards — code review, quality gates, debt tracking |
-| `ponytail:ponytail-audit` | Security scan and quality audit before commits |
-| `ponytail:ponytail-debt` | Technical debt tracking and refactoring prompts |
-| `ponytail:ponytail-gain` | Feature gain analysis and impact scoring |
-| `ponytail:ponytail-help` | Context-aware help and onboarding for new contributors |
-| `ponytail:ponytail-review` | Pre-commit review pipeline with auto-fix loops |
-
-The plugin system is **configurable per-project** — enable only the ponytail modules you need via `config.yaml`.
-
 ## 🚀 Quick Start
 
 ### 1. Add to `pubspec.yaml`
@@ -352,39 +337,9 @@ abstract class StickerProvider {
 
 ---
 
-## 📋 Roadmap
-
-```mermaid
-gantt
-    title canvas_studio Development Roadmap
-    dateFormat  YYYY-MM-DD
-    section Phase 1
-    Core Canvas Engine       :done, p1, 2026-03-01, 3w
-    Image + Text Tools       :done, p2, 2026-03-22, 2w
-    section Phase 3
-    Templates + Brand Auto-Fill :done, p3, 2026-04-05, 1w
-    section Phase 4
-    Audio + Video Export     :done, p4, 2026-04-12, 2w
-    section Phase 5
-    Developer Customization  :active, p5, 2026-04-26, 2w
-    Example App + Publish    :p6, 2026-05-10, 2w
-```
-
----
-
 ## 📄 License
 
 MIT License — see [LICENSE](LICENSE) for details.
-
----
-
-## 🤝 Contributing
-
-1. Fork the repo
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
 
 ---
 
