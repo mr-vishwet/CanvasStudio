@@ -1,7 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/painting.dart';
-import '../models/layer/layer.dart';
 import '../state/canvas_controller.dart';
 
 class _GestureSession {
