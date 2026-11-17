@@ -8,23 +8,7 @@
 
 When the SDK is complete, your host app will look and feel like this:
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  ◀ Undo  Redo ▶                          Brand Fill  🎨  Export │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │  🖼️  CANVAS (1080×1080)                                 │   │
-│  │                                                         │   │
-│  │  📝 "Happy Diwali"    🖼️ [Product Image]     ✨ [Sticker]│   │
-│  │      (Devanagari)         (with BG removed)   (animated) │   │
-│  │                                                         │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  🎵 Audio: Diwali Beat.mp3  ▶  ⏸  📹 Video: 15s MP4             │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-```
+![Canvas Studio Hero — Canvas Editor UI](example/assets/screenshots/hero-canvas.png)
 
 ### 🎯 End-to-End Flow
 
@@ -42,53 +26,25 @@ Template Picker  →  Canvas Editor  →  Brand Auto-Fill  →  Export  →  Sha
 
 ## ✨ Features
 
-| Feature | Description | Status |
-|---------|-------------|--------|
-| 🖼️ **Layered Canvas** | Text, Image, Shape, Sticker, Paint layers with z-order | ✅ Done |
-| 🎬 **Video Export** | Image + audio → MP4 via on-device FFmpeg | ✅ Done |
-| 🏷️ **Brand Auto-Fill** | PlaceholderName matching + logo injection | ✅ Done |
-| 🧹 **BG Removal** | On-device ONNX U2Net (no API cost) | ✅ Done |
-| 🌐 **Indic Scripts** | Devanagari, Bengali, Tamil, Telugu, Gujarati | ✅ Done |
-| 🎨 **Full Customization** | Theme, icons, fonts, toolbar, hooks | ✅ Done |
-| 📦 **Template System** | Pluggable `TemplateProvider` interface | ✅ Done |
-| 🎵 **Audio Library** | Pluggable `AudioProvider` with preview | ✅ Done |
-| ↩️ **Undo/Redo** | 50-step immutable snapshot stack | ✅ Done |
-| 📐 **Snap Lines** | Center + edge alignment guides | ✅ Done |
-| 📱 **Offline-First** | 91% of features work without internet | ✅ Done |
+| Feature | Description | Status | Preview |
+|---------|-------------|--------|---------|
+| 🖼️ **Layered Canvas** | Text, Image, Shape, Sticker, Paint layers with z-order | ✅ Done | |
+| 🎬 **Video Export** | Image + audio → MP4 via on-device FFmpeg | ✅ Done | ![Video Export](example/assets/screenshots/feature-video.png) |
+| 🏷️ **Brand Auto-Fill** | PlaceholderName matching + logo injection | ✅ Done | |
+| 🧹 **BG Removal** | On-device ONNX U2Net (no API cost) | ✅ Done | ![Image Editing](example/assets/screenshots/feature-image.png) |
+| 🌐 **Indic Scripts** | Devanagari, Bengali, Tamil, Telugu, Gujarati | ✅ Done | ![Text Editing](example/assets/screenshots/feature-text.png) |
+| 🎨 **Full Customization** | Theme, icons, fonts, toolbar, hooks | ✅ Done | |
+| 📦 **Template System** | Pluggable `TemplateProvider` interface | ✅ Done | |
+| 🎵 **Audio Library** | Pluggable `AudioProvider` with preview | ✅ Done | |
+| ↩️ **Undo/Redo** | 50-step immutable snapshot stack | ✅ Done | |
+| 📐 **Snap Lines** | Center + edge alignment guides | ✅ Done | |
+| 📱 **Offline-First** | 91% of features work without internet | ✅ Done | |
 
 ---
 
 ## 🏗️ Architecture
 
-```mermaid
-graph TD
-    A[Host App] --> B[CanvasEditorWidget]
-    B --> C[CanvasController]
-    C --> D[CanvasDocument]
-    C --> E[HistoryManager]
-    C --> F[SelectionState]
-    B --> G[CanvasView]
-    G --> H[CustomPainter]
-    H --> I[LayerRenderer]
-    I --> J[5 Layer Types]
-    
-    C --> K[TemplateProvider]
-    C --> L[AudioProvider]
-    C --> M[StickerProvider]
-    
-    C --> N[ExportHandler]
-    N --> O[ExportRenderer - PNG/JPG]
-    N --> P[FFmpegCommandBuilder - MP4]
-    
-    C --> Q[BgRemovalService]
-    Q --> R[ONNX U2Net On-Device]
-    Q --> S[Backend API Fallback]
-    
-    style A fill:#e1f5fe
-    style B fill:#fff3e0
-    style C fill:#f3e5f5
-    style J fill:#e8f5e9
-```
+![SDK Architecture Diagram](docs/assets/architecture.png)
 
 ### Layer Types
 
@@ -99,6 +55,12 @@ graph TD
 | `ShapeLayer` | 🔲 | Rectangles, circles, lines, polygons |
 | `StickerLayer` | ✨ | Emoji, festival elements, decorative |
 | `PaintLayer` | 🖌️ | Freehand drawing, signatures |
+
+---
+
+## 📱 Platform Support
+
+![Platform Support Matrix](docs/assets/platform-support.png)
 
 ---
 
