@@ -261,6 +261,93 @@ def generate_architecture():
     print("Saved docs/assets/architecture.png")
 
 
+def generate_feature_brand():
+    """Brand auto-fill feature image."""
+    W, H = 600, 400
+    img = Image.new("RGB", (W, H), DARK_BG)
+    d = ImageDraw.Draw(img)
+
+    d.text((24, 24), "Brand Auto-Fill", font=get_font(24, bold=True), fill=WHITE)
+    d.text((24, 60), "Placeholder matching + logo injection", font=get_font(16), fill=LIGHT_GRAY)
+
+    # Form panel
+    draw_rounded_rect(d, (24, 100, 300, 340), 16, DARK_PURPLE)
+    d.text((50, 120), "Business Name", font=get_font(14), fill=LIGHT_GRAY)
+    draw_rounded_rect(d, (50, 140, 280, 170), 8, CANVAS_BG)
+    d.text((55, 148), "Sharma Electronics", font=get_font(14), fill=WHITE)
+
+    d.text((50, 180), "Phone", font=get_font(14), fill=LIGHT_GRAY)
+    draw_rounded_rect(d, (50, 200, 280, 230), 8, CANVAS_BG)
+    d.text((55, 208), "+91 98765 43210", font=get_font(14), fill=WHITE)
+
+    d.text((50, 240), "Address", font=get_font(14), fill=LIGHT_GRAY)
+    draw_rounded_rect(d, (50, 260, 280, 290), 8, CANVAS_BG)
+    d.text((55, 268), "Mumbai, India", font=get_font(14), fill=WHITE)
+
+    d.text((50, 300), "Tagline", font=get_font(14), fill=LIGHT_GRAY)
+    draw_rounded_rect(d, (50, 320, 280, 350), 8, CANVAS_BG)
+    d.text((55, 328), "Quality Since 1990", font=get_font(14), fill=WHITE)
+
+    # Apply button
+    draw_rounded_rect(d, (100, 360, 230, 385), 8, AMBER)
+    d.text((120, 370), "Apply to Canvas", font=get_font(14, bold=True), fill=DARK_BG)
+
+    # Canvas preview on right
+    draw_rounded_rect(d, (340, 100, 576, 380), 16, CANVAS_BG)
+    d.text((370, 120), "Sharma Electronics", font=get_font(24, bold=True), fill=WHITE)
+    d.text((370, 160), "+91 98765 43210", font=get_font(18), fill=LIGHT_GRAY)
+    d.text((370, 190), "Mumbai, India", font=get_font(18), fill=LIGHT_GRAY)
+    d.text((370, 220), "Quality Since 1990", font=get_font(18), fill=LIGHT_GRAY)
+
+    # Logo placeholder
+    draw_rounded_rect(d, (400, 240, 480, 320), 8, PURPLE)
+    d.text((420, 275), "LOGO", font=get_font(16, bold=True), fill=WHITE)
+
+    img.save("example/assets/screenshots/feature-brand.png")
+    print("Saved feature-brand.png")
+
+
+def generate_feature_templates():
+    """Template picker feature image."""
+    W, H = 600, 400
+    img = Image.new("RGB", (W, H), DARK_BG)
+    d = ImageDraw.Draw(img)
+
+    d.text((24, 24), "Template Picker", font=get_font(24, bold=True), fill=WHITE)
+    d.text((24, 60), "5 starter templates · Category filters", font=get_font(16), fill=LIGHT_GRAY)
+
+    # Filter tabs
+    tabs = ["All", "Blank", "Business", "Sale", "Festival", "Video"]
+    tx = 24
+    for tab in tabs:
+        draw_rounded_rect(d, (tx, 100, tx + 90, 130), 8, CANVAS_BG)
+        d.text((tx + 25, 110), tab, font=get_font(12), fill=LIGHT_GRAY)
+        tx += 100
+
+    # Template grid
+    templates = [
+        ("Blank Square", "1080×1080", PURPLE),
+        ("Blank Portrait", "1080×1920", TEAL),
+        ("Business Card", "1080×608", AMBER),
+        ("Sale Poster", "1080×1920", PINK),
+        ("Festival Post", "1080×1080", AMBER),
+        ("Video Slideshow", "1080×1080", TEAL),
+    ]
+    ty = 160
+    for i, (name, size, color) in enumerate(templates):
+        col = i % 2
+        row = i // 2
+        x = 24 + col * 290
+        y = ty + row * 110
+        draw_rounded_rect(d, (x, y, x + 270, y + 90), 12, CANVAS_BG)
+        d.rectangle([x + 20, y + 20, x + 100, y + 70], fill=color)
+        d.text((x + 120, y + 25), name, font=get_font(14, bold=True), fill=WHITE)
+        d.text((x + 120, y + 50), size, font=get_font(12), fill=LIGHT_GRAY)
+
+    img.save("example/assets/screenshots/feature-templates.png")
+    print("Saved feature-templates.png")
+
+
 def generate_platform_support():
     """Platform support image."""
     W, H = 800, 400
@@ -295,6 +382,8 @@ if __name__ == "__main__":
     generate_feature_text()
     generate_feature_image()
     generate_feature_video()
+    generate_feature_brand()
+    generate_feature_templates()
     generate_architecture()
     generate_platform_support()
     print("All images generated!")
